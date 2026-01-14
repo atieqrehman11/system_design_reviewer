@@ -1,0 +1,23 @@
+[app]
+name = "System Design Mentor API"
+description = "AI-powered architecture analysis and recommendations"
+version = "1.0.0"
+environment = "dev"
+debug = true
+
+[server]
+host = "0.0.0.0"
+port = 8000
+reload = true
+
+[cors]
+origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"]
+credentials = true
+methods = ["*"]
+headers = ["*"]
+
+[api.v1]
+prefix = "/api/v1"
+
+[crewai]
+verbose = true

@@ -1,0 +1,16 @@
+site_name: System Design Mentor
+nav:
+  - Home: index.md
+  - Configuration: configuration.md
+theme:
+  name: material
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_full_path: false
+extra:
+  repo_name: SystemDesignMentor
+  repo_url: https://example.com/your/repo
