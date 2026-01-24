@@ -31,9 +31,8 @@ OPENAI_MODEL_NAME = "openai_model_name"
 CREWAI_VERBOSE = "crewai_verbose"
 CREWAI_MANAGER_LLM = "crewai_manager_llm"
 
-# Example usage:
-# from app.config import settings
-# from app.config_keys import APP_NAME, SERVER_PORT
-# 
-# app_name = settings.get(APP_NAME)
-# port = settings.get(SERVER_PORT)
+USE_AZURE_OPENAI="use_azure_openai"
+AZURE_API_VERSION="azure_api_version"
+AZURE_ENDPOINT="azure_endpoint"
+AZURE_API_KEY="azure_api_key"
+AZURE_DEPLOYMENT_NAME="azure_deployment_name"

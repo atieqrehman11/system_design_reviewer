@@ -56,3 +56,9 @@ test-results/
 *.map
 *.pdb
 *.ilk
+.requirements.sha
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+crash.log

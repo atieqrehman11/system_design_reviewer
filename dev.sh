@@ -20,6 +20,7 @@ start_backend() {
     
     # Activate virtual environment if it exists
     if [ -d "venv" ]; then
+        echo "🔧 Using virtual environment from backend/venv"
         source venv/bin/activate
     else
         echo "⚠️  Virtual environment not found. Runing: python3 -m venv backend/venv"
@@ -27,10 +28,31 @@ start_backend() {
         source venv/bin/activate
     fi
     
-    # Check if dependencies are installed
-    if ! python3 -c "import fastapi" 2>/dev/null; then
-        echo "📥 Installing backend dependencies..."
-        pip install -r requirements.txt
+    # Sync dependencies if requirements.txt changed (using a hash)
+    REQUIREMENTS_FILE="requirements.txt"
+    REQ_HASH_FILE=".requirements.sha"
+    if command -v sha256sum >/dev/null 2>&1; then
+        CURRENT_HASH=$(sha256sum "$REQUIREMENTS_FILE" | awk '{print $1}')
+    else
+        CURRENT_HASH=$(cksum "$REQUIREMENTS_FILE" | awk '{print $1}')
+    fi
+    STORED_HASH=""
+    if [ -f "$REQ_HASH_FILE" ]; then
+        STORED_HASH=$(cat "$REQ_HASH_FILE")
+    fi
+    if [ ! -f "$REQ_HASH_FILE" ] || [ "$CURRENT_HASH" != "$STORED_HASH" ]; then
+        echo "📥 requirements.txt changed — installing backend dependencies..."
+        pip install -r "$REQUIREMENTS_FILE"
+        echo "$CURRENT_HASH" > "$REQ_HASH_FILE"
+    else
+        # Fallback: ensure a key package is present (helps for new venvs)
+        if ! python3 -c "import fastapi" 2>/dev/null; then
+            echo "📥 Backend missing packages — installing requirements..."
+            pip install -r "$REQUIREMENTS_FILE"
+            echo "$CURRENT_HASH" > "$REQ_HASH_FILE"
+        else
+            echo "✅ Backend dependencies are up to date."
+        fi
     fi
     
     # Start the server

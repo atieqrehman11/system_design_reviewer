@@ -56,9 +56,15 @@ class Settings:
             # CrewAI configuration
             "openai_api_key": ("OPENAI_API_KEY", "openai.api_key", "", str),
             "openai_model_name": ("OPENAI_MODEL_NAME", "openai.model_name", "", str),
+            
+            #azure configuration
+            "use_azure_openai": ("USE_AZURE_OPENAI", "use_azure_openai", False, bool),
+            "azure_api_version": ("AZURE_API_VERSION", "azure_api_version", "", str),
+            "azure_endpoint": ("AZURE_ENDPOINT","azure_endpoint", "", str),
+            "azure_api_key": ("AZURE_API_KEY", "azure_api_key", "", str),
+            "azure_deployment_name": ("AZURE_DEPLOYMENT_NAME","azure_deployment_name", "", str),
 
-            "crewai_verbose": ("CREWAI_VERBOSE", "crewai.verbose", True, bool),
-            #"crewai_manager_llm": ("CREW_MANAGER_LLM", "crewai.manager_llm", "gpt-4", str)
+            "crewai_verbose": ("CREWAI_VERBOSE", "crewai.verbose", True, bool)
 
         }
         

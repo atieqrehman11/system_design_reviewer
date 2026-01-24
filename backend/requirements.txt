@@ -4,7 +4,7 @@ uvicorn[standard]==0.31.1
 python-multipart==0.0.9
 
 # CrewAI and AI dependencies
-crewai[tools]==1.7.2
+crewai[tools,azure-ai-inference]==1.7.2
 openai==1.83.0
 langchain==0.1.0
 

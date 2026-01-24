@@ -10,15 +10,25 @@ from app.models.security_schema import SecurityReview
 from app.models.performance_schema import PerformanceReview
 from typing import List
 
+from app.services.llm import LLMService
+
 @CrewBase
 class ReviewCrewV1():
+    llm_service = LLMService()
+
     # Paths to your config files
     agents_config = '../config/review/agents.yaml' 
     tasks_config = '../config/review/tasks.yaml'
 
     agents: List[BaseAgent]
     tasks: List[Task]
-    manager_llm: str
+
+    def _create_llm(self, agent_name: str) -> LLM:
+        """Helper to create an LLM for an agent"""
+        agent_config = self.agents_config.get(agent_name, {})
+        llm_params = agent_config.get('llm_params', {})
+        
+        return self.llm_service.create_llm(llm_params)
     
     def _validate_extraction(self, output: TaskOutput):
         # Ensure we check the pydantic object correctly
@@ -28,16 +38,6 @@ class ReviewCrewV1():
                     feedback=getattr(output.pydantic, 'validation_errors', "Invalid doc.")
                 )
         
-    def _create_llm(self, agent_name: str) -> LLM:
-        """Helper to build an LLM from YAML config"""
-        config = self.agents_config.get(agent_name, {})
-        params = config.get('llm_params', {})
-        
-        return LLM(
-            model=config.get('model', 'openai/gpt-4o-mini'),
-            temperature=params.get('temperature', 0.1),
-            top_p=params.get('top_p', 1.0)
-        )
     
     # --- AGENT FACTORY ---
 
