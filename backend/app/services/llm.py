@@ -22,7 +22,7 @@ class LLMService():
         
         return LLM(
             model=llm_params.get('model'),
-            temperature=llm_params.get('temperature'),
+            temperature=llm_params.get('temperature', 1.0),
             top_p=llm_params.get('top_p')
         )
     
@@ -32,13 +32,13 @@ class LLMService():
         return LLM(
             model='azure/'+settings.get(AZURE_DEPLOYMENT_NAME),
             api_version=settings.get(AZURE_API_VERSION),
-            endpoint=settings.get(AZURE_ENDPOINT),
+            base_url=settings.get(AZURE_ENDPOINT),
             api_key=settings.get(AZURE_API_KEY),
             drop_params=True,
             additional_drop_params=["stop", "max_tokens"], 
             max_completion_tokens=4096,
-            temperature=llm_params.get('temperature'),
-            top_p=llm_params.get('top_p')
+            temperature=1.0,
+            top_p=1.0
         )
     
 __all__ = ["LLMService"]
