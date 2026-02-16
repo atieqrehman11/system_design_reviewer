@@ -7,6 +7,7 @@ python-multipart==0.0.9
 crewai[tools,azure-ai-inference]==1.7.2
 openai==1.83.0
 langchain==0.1.0
+litellm<1.70.0
 
 # Data models and validation
 pydantic==2.11.9

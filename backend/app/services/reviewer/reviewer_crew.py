@@ -13,12 +13,12 @@ from typing import List
 from app.services.llm import LLMService
 
 @CrewBase
-class ReviewCrewV1():
+class DesignReviewerCrew():
     llm_service = LLMService()
 
     # Paths to your config files
-    agents_config = '../config/review/agents.yaml' 
-    tasks_config = '../config/review/tasks.yaml'
+    agents_config = '../../config/review/v1/agents.yaml' 
+    tasks_config = '../../config/review/v1/tasks.yaml'
 
     agents: List[BaseAgent]
     tasks: List[Task]
@@ -40,26 +40,41 @@ class ReviewCrewV1():
         
     
     # --- AGENT FACTORY ---
+    def _create_agent(self, agent_name: str) -> Agent:
+        # 1. Grab the raw dictionary
+        config = self.agents_config[agent_name]  # This is the raw config dict for the agent']
 
-    @agent
-    def blueprint_specialist(self) -> Agent:    
-        return Agent(config=self.agents_config['blueprint_specialist'], 
-                     llm=self._create_llm('blueprint_specialist'))
+        agent = Agent(
+            role=config.get('role'),
+            goal=config.get('goal'),
+            llm=self._create_llm(agent_name),
+            verbose=False,
+            config=config
+        )
 
-    @agent
-    def performance_specialist(self) -> Agent:       
-        return Agent(config=self.agents_config['performance_specialist'], 
-                     llm=self._create_llm('performance_specialist'))
+        agent.fingerprint.metadata.update({
+            "display_name": config.get("display_name"),
+            "thinking_style": config.get("thinking_style")
+        })
 
-    @agent
-    def security_specialist(self) -> Agent:
-        return Agent(config=self.agents_config['security_specialist'], 
-                     llm=self._create_llm('security_specialist'))
+        return agent
     
     @agent
-    def chief_architect(self) -> Agent:
-        return Agent(config=self.agents_config['chief_architect'], 
-                     llm=self._create_llm('chief_architect'))
+    def librarian(self) -> Agent: 
+        return self._create_agent('librarian')
+    
+    @agent
+    def performance_architect(self) -> Agent:  
+        return self._create_agent('performance_architect')     
+
+    @agent
+    def security_architect(self) -> Agent:
+        return self._create_agent('security_architect')
+
+    @agent
+    def chief_strategist(self) -> Agent:
+        return self._create_agent('chief_strategist')
+    
 
     # --- TASK FACTORY ---    
     @task
@@ -82,7 +97,6 @@ class ReviewCrewV1():
                     output_pydantic=SecurityReview,
                     callback=log_task_metrics)
    
-      
     @task
     def final_review_task(self) -> Task:
         return Task(config=self.tasks_config['final_review_task'], 
@@ -106,8 +120,8 @@ class ReviewCrewV1():
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            verbose=True,
+            verbose=False,
             cache=False
         )
     
-__all__ = ['ReviewCrewV1']
+__all__ = ['DesignReviewerCrew']

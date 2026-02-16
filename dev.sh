@@ -4,11 +4,18 @@
 
 echo "🚀 Starting System Design Mentor Development Environment"
 
-# Function to check if port is in use
-check_port() {
-    if lsof -Pi :$1 -sTCP:LISTEN -t >/dev/null ; then
-        echo "⚠️  Port $1 is already in use"
-        return 1
+# Function to ensure port is available (kill any existing process if needed)
+ensure_port_available() {
+    clear
+    
+    local port=$1
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
+        echo "🔌 Port $port is in use, clearing it..."
+        lsof -ti:$port | xargs kill -9 2>/dev/null || true
+        sleep 1
+        echo "✅ Port $port is now available"
+    else
+        echo "✅ Port $port is available"
     fi
     return 0
 }
@@ -16,6 +23,10 @@ check_port() {
 # Function to start backend
 start_backend() {
     echo "📦 Starting Backend (FastAPI)..."
+    
+    # Ensure port 8000 is available
+    ensure_port_available 8000
+    
     cd backend
     
     # Activate virtual environment if it exists
@@ -66,6 +77,10 @@ start_backend() {
 # Function to start frontend
 start_frontend() {
     echo "🎨 Starting Frontend (React)..."
+    
+    # Ensure port 3000 is available
+    ensure_port_available 3000
+    
     cd frontend
     
     # Check if node_modules exists
@@ -117,18 +132,18 @@ trap cleanup EXIT INT TERM
 # Main execution
 case "$1" in
     "backend")
-        check_port 8000 && start_backend
+        ensure_port_available 8000 && start_backend
         wait
         ;;
     "frontend")
-        check_port 3000 && start_frontend
+        ensure_port_available 3000 && start_frontend
         wait
         ;;
     "test")
         run_tests
         ;;
     "full"|"")
-        check_port 8000 && check_port 3000 || exit 1
+        ensure_port_available 8000 && ensure_port_available 3000
         start_backend
         sleep 3  # Give backend time to start
        # start_frontend

@@ -1,5 +1,6 @@
 extract_blueprint_task:
   description: >
+    ### STEP 0: INTERNAL MONOLOGUE ###
     PHASE 1 (VALIDATE): Inspect {design_doc}. If it lacks at least 2 components, data flows, or a clear objective, set 'is_valid' to False and list the missing items in 'validation_errors'. STOP HERE if invalid.
 
     PHASE 2 (EXTRACT): If valid, analyze the design document provided in the input. Your analysis must follow these Core Directives:
@@ -15,13 +16,15 @@ extract_blueprint_task:
     Design Document to process:
     {design_doc}
   expected_output: >
-    A strictly formatted JSON object containing:
+    A text response containing:
+    1. An internal monologue wrapped in <thinking>...</thinking> tags.
+    2. strictly formatted JSON object containing:
     - system_identity (name, style, deployment_target, goals)
     - component_registry (list of components with technology, hosting, and statefulness)
     - interaction_map (source-to-destination mapping with protocols and nature)
     - technical_constraints (traffic, performance, and security requirements)
     - omission_report (discrepancies between text and diagram)
-  agent: blueprint_specialist
+  agent: librarian
 
 performance_review_task:
   description: >
@@ -42,7 +45,7 @@ performance_review_task:
     - scalability_blockers: Specific reasons why horizontal scaling or Load Balancers cannot be implemented.
     - reliability_score: A 0-100 score with a detailed technical justification.
   async_execution: true
-  agent: performance_specialist
+  agent: performance_architect
 
 security_review_task:
   description: >
@@ -68,7 +71,7 @@ security_review_task:
     - trust_boundary_violations: List of areas where data moves across security zones.
     - missing_security_controls: Critical omissions identified from the blueprint.
   async_execution: true
-  agent: security_specialist
+  agent: security_architect
 
 final_review_task:
   description: >
@@ -87,4 +90,4 @@ final_review_task:
   
   expected_output: >
     A final ReviewReport (JSON). Ensure 'data_available' reflects the state of the input doc. All fields in the Pydantic model must be populated.
-  agent: chief_architect
+  agent: chief_strategist

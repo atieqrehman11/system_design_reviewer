@@ -15,8 +15,10 @@ class ReviewRequest(BaseModel):
 
 # Define the response schema
 class ReviewResponse(BaseModel):
-    status: str
-    message: str
-    report: Optional[ReviewReport] = None
+    agent: str = None
+    message_type: str = None
+    status: str = None
+    message: str = None
+    report: object = None
 
 __all__ = ["ReviewRequest", "ReviewResponse"]

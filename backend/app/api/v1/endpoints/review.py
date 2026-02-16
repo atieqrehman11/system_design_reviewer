@@ -1,20 +1,12 @@
-from app.models.api_schema import ReviewRequest, ReviewResponse
 from fastapi import APIRouter
 
-from app.services.review_crew_v1 import ReviewCrewV1
-
+from app.models.api_schema import ReviewRequest, ReviewResponse
+from app.services.reviewer.reviewer_service import ReviewerService
 router = APIRouter()
 
+reviewer_service = ReviewerService()
+
 @router.post("/multi-agent-review", response_model=ReviewResponse)
-async def start_audit(data: ReviewRequest):
-    # Keep the endpoint thin! Delegate work to a service.
-
-    result = ReviewCrewV1().crew().kickoff(inputs={'design_doc': data.design_doc})
-    response = result.pydantic.model_dump()
-
-    # 4. Return successful analysis
-    return ReviewResponse(
-        status="success",
-        message="Architecture analysis complete.",
-        report=response
-    )
+async def review_design_document(data: ReviewRequest):
+    return reviewer_service.review_design_document(data.design_doc)
+   
