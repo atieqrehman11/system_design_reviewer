@@ -6,12 +6,14 @@ from typing import AsyncGenerator
 from pydantic import BaseModel
 
 from app.services.reviewer.reviewer_service import ReviewerService
-from app.services.reviewer.event_dispatcher import dispatcher
+from app.common.event_dispatcher import EventDispatcher
+
 from app.models.api_schema import ReviewRequest
 
 class ReviewerFacade:
-    def __init__(self, service: ReviewerService):
-        self.service = service
+    def __init__(self, reviewer_service: ReviewerService, event_dispatcher: EventDispatcher = None):
+        self.reviewer_service = reviewer_service
+        self.event_dispatcher = event_dispatcher
 
     async def start_review(self, request: ReviewRequest) -> AsyncGenerator[str, None]:
         """
@@ -21,11 +23,11 @@ class ReviewerFacade:
         """
         sync_queue = Queue() # Standard threaded Queue
         
-        dispatcher.register_session(request.correlation_id, sync_queue)
+        self.event_dispatcher.register_session(request.correlation_id, sync_queue)
 
         try:    
             # Start the execution IMMEDIATELY
-            self.service.run_crew_job(request, sync_queue)
+            self.reviewer_service.run_crew_job(request, sync_queue)
             
             # Return the generator that will poll the sync_queue
             async for chunk in self._async_generator_wrapper(sync_queue):
@@ -33,7 +35,7 @@ class ReviewerFacade:
         
         finally:
             print(f"Unregistering session: {request.correlation_id}")
-            dispatcher.unregister_session(request.correlation_id)
+            self.event_dispatcher.unregister_session(request.correlation_id)
 
     async def _async_generator_wrapper(self, sync_queue: Queue):
         """Polls the threaded queue and yields to the async stream."""
@@ -71,7 +73,7 @@ class ReviewerFacade:
                     break
                     
             except Empty:
-                print("Queue is empty, yielding control to event loop...")
+                # print("Queue is empty, yielding control to event loop...")
                 await asyncio.sleep(0.1)  # Sleep briefly to avoid busy waiting
                 continue 
             except asyncio.CancelledError:
@@ -83,3 +85,5 @@ class ReviewerFacade:
                 print(f"Streaming Error: {e}")
                 yield json.dumps({"status": "error", "message": str(e)}) + "\n"
                 break
+
+__all__ = ['ReviewerFacade']

@@ -3,8 +3,10 @@ from threading import Thread
 from app.services.reviewer.reviewer_crew import DesignReviewerCrew
 from app.models.api_schema import ReviewRequest, ReviewResponse
 from app.services.reviewer.reviewer_event_listeners import ReviewerEventListener
+from app.common.event_dispatcher import EventDispatcher
 
-ReviewerEventListener() 
+event_dispatcher = EventDispatcher()
+ReviewerEventListener(event_dispatcher=event_dispatcher)  # Initialize the listener with the dispatcher
 
 class ReviewerService:
     def __init__(self):
@@ -40,4 +42,4 @@ class ReviewerService:
 
         Thread(target=_target, daemon=True).start()
 
-reviewerService = ReviewerService()
+__all__ = ['ReviewerService']

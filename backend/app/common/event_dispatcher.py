@@ -24,5 +24,4 @@ class EventDispatcher:
             print(f"Found queue: {queue} for session_id: {session_id}")
             queue.put(data)
 
-# Global instance
-dispatcher = EventDispatcher()
+__all__ = ['EventDispatcher']

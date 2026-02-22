@@ -5,11 +5,14 @@ from fastapi.responses import StreamingResponse
 
 from app.models.api_schema import ReviewRequest, ReviewResponse
 from app.services.reviewer.reviewer_facade import ReviewerFacade
-from app.services.reviewer.reviewer_service import reviewerService
+from app.services.reviewer.reviewer_service import ReviewerService
+from app.common.event_dispatcher import EventDispatcher
 
 router = APIRouter()
 
-reviewer_facade = ReviewerFacade(reviewerService)
+reviewer_service = ReviewerService()
+event_dispatcher = EventDispatcher()
+reviewer_facade = ReviewerFacade(reviewer_service, event_dispatcher)
 
 @router.post("", response_model=ReviewResponse)
 async def review_design_document(data: ReviewRequest, x_a2a_task_id: str = Header(None)):
