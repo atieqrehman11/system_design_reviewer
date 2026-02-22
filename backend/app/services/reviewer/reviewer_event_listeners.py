@@ -8,30 +8,37 @@ from crewai.events import (
     TaskCompletedEvent
 )
 from crewai.events import BaseEventListener
+from .event_dispatcher import dispatcher
 
 class ReviewerEventListener(BaseEventListener):
-    def __init__(self, queue: Queue):
-        super().__init__()
-        self.queue = queue
 
     def setup_listeners(self, crewai_event_bus):
         """Set up event listeners with the CrewAI event bus."""
 
         @crewai_event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source, event):
+            correlation_id = getattr(source.config, 'correlation_id', None)
+            if not correlation_id:
+                print(f"No correlation_id found in event metadata; skipping dispatch. for event: {event}")
+                return  # Don't process events without a correlation_id
+            
             message = ReviewResponse(
-                status="completed", 
+                status="complete", 
                 message=f"'{event.crew_name}' has completed design review!"
             )
-            self.queue.put(message)
+            
+            dispatcher.dispatch(correlation_id, message)
 
         @crewai_event_bus.on(AgentExecutionStartedEvent)
         def on_agent_execution_started(source, event):
-            
+            print("Received AgentExecutionStartedEvent")
             metadata = source.fingerprint.metadata
+            correlation_id = metadata.get("correlation_id", None)
+            if not correlation_id:
+                print(f"No correlation_id found in event metadata; skipping dispatch. for event: {event}")
+                return  # Don't process events without a correlation_id
             display_name = metadata.get("display_name", 'Reviewer')
             thinking_msg = metadata.get("thinking_style", "Thinking...")
-            
             message = ReviewResponse(
                 agent=display_name,
                 message_type="thinking",
@@ -39,10 +46,12 @@ class ReviewerEventListener(BaseEventListener):
                 source=source,
                 event=event,
                 status="executing")
-            self.queue.put(message)
+            dispatcher.dispatch(correlation_id, message)
 
         @crewai_event_bus.on(TaskCompletedEvent)
-        def on_task_completed(source, event):            
+        def on_task_completed(source, event):   
+            print("Received TaskCompletedEvent")
+
             raw_text = event.output.raw
     
             # If Pydantic parsing failed, we try to manually find the JSON block
@@ -63,9 +72,15 @@ class ReviewerEventListener(BaseEventListener):
             
             if assigned_agent:
                 agent_name = assigned_agent.fingerprint.metadata.get("display_name", assigned_agent.role)
+                correlation_id = assigned_agent.fingerprint.metadata.get("correlation_id", None)
             else:
-                agent_name = "Agent"    
+                agent_name = "Agent"
+                correlation_id = source    
 
+            if not correlation_id:
+                print(f"No correlation_id found in event metadata; skipping dispatch. for event: {event}")
+                return  # Don't process events without a correlation_id
+            
             message = ReviewResponse(
                 agent = agent_name,
                 message_type="result",
@@ -74,6 +89,7 @@ class ReviewerEventListener(BaseEventListener):
                 report=event_output,
                 status="executed", 
             )
-            self.queue.put(message)
+
+            dispatcher.dispatch(correlation_id, message)
 
 __all__ = ["ReviewerEventListener"]

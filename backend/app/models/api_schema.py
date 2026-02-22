@@ -11,7 +11,8 @@ class ErrorResponse(BaseModel):
     feedback: Optional[str] = None
     
 class ReviewRequest(BaseModel):
-    design_doc: str
+    design_doc: str = None
+    correlation_id: Optional[str] = None
 
 # Define the response schema
 class ReviewResponse(BaseModel):
