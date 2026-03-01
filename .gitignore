@@ -1,5 +1,6 @@
 .env
 venv/
+.venv
 .pytest_cache/
 **/__pycache__
 **/__pycache__/*
@@ -62,3 +63,5 @@ test-results/
 terraform.tfstate
 terraform.tfstate.backup
 crash.log
+
+site

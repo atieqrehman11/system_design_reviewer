@@ -1,7 +1,9 @@
 site_name: System Design Mentor
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
   - Configuration: configuration.md
+  - API Reference: api-reference.md
 theme:
   name: material
 plugins:

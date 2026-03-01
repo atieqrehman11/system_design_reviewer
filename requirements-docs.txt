@@ -1,0 +1,5 @@
+# Documentation dependencies
+# Use MkDocs 1.x for compatibility with Material theme
+mkdocs>=1.5,<2.0
+mkdocs-material>=9.0,<10.0
+mkdocstrings[python]>=0.24,<1.0
