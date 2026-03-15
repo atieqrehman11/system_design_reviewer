@@ -37,13 +37,20 @@ performance_review_task:
     simply output "SKIPPED: Invalid input." and do not perform the analysis.
 
     Quantify risks using technical terminology (e.g., IOPS Saturation, Blocking Operations). Analyze concurrency impacts specifically for "Peak Traffic" scenarios.
+
+    FORMAT DIRECTIVE:
+    Write the 'summary' field according to the requested output format: {output_format}
+    - If "markdown": use ## headings, **bold** for critical findings, and - for bullet lists
+    - If "plain": write clean prose with no Markdown syntax
+    - If "json": write a single concise sentence only — the structured bottlenecks and reliability_score fields carry the detail
+    Do NOT apply any formatting to structured fields (bottlenecks, scalability_blockers, reliability_score).
       
   expected_output: >
     A JSON object containing:
-    - performance_audit_summary: A high-level overview of system readiness.
+    - summary: A high-level overview of system readiness, formatted per the FORMAT DIRECTIVE above.
     - bottlenecks: List of specific issues with type, component, observation, impact_at_scale, severity, and technical_remediation.
     - scalability_blockers: Specific reasons why horizontal scaling or Load Balancers cannot be implemented.
-    - reliability_score: A 0-100 score with a detailed technical justification.
+    - reliability_score: An object with a 0-100 score and a justification string formatted per the FORMAT DIRECTIVE above.
   async_execution: true
   agent: performance_architect
 
@@ -62,10 +69,17 @@ security_review_task:
     4. Stateful Risks: Analyze local shell access risks for 'Local Server Disk' hosting.
     
     Refer to the omission_report to identify missing security-critical controls.
+
+    FORMAT DIRECTIVE:
+    Write the 'summary' field according to the requested output format: {output_format}
+    - If "markdown": use ## headings, **bold** for critical threats, and - for bullet lists
+    - If "plain": write clean prose with no Markdown syntax
+    - If "json": write a single concise sentence only — the structured vulnerabilities field carries the detail
+    Do NOT apply any formatting to structured fields (vulnerabilities, trust_boundary_violations, missing_security_controls).
       
   expected_output: >
     A JSON object containing:
-    - threat_model_summary: High-level risk assessment.
+    - summary: High-level risk assessment, formatted per the FORMAT DIRECTIVE above.
     - vulnerabilities: List of threats with STRIDE category, OWASP mapping, 
       attack vector, and mitigation strategy.
     - trust_boundary_violations: List of areas where data moves across security zones.
@@ -87,7 +101,16 @@ final_review_task:
     2. Prioritization: Rank by impact. Security P1 items always take precedence.
     3. Business Translation: Ensure the 'finding' in the audit table is understandable by a CTO. (e.g., instead of 'No Load Balancer', use 
        'Single Point of Failure impacting Service Continuity').
+
+    FORMAT DIRECTIVE:
+    Write the 'deep_dive' field according to the requested output format: {output_format}
+    - If "markdown": use ## for section headings, **bold** for critical terms, - for bullet lists, and triple backticks for code or config examples
+    - If "plain": write clean prose paragraphs with no Markdown syntax
+    - If "json": omit deep_dive entirely (set to null) — the scorecard and findings fields carry the full detail
+    Do NOT apply any formatting to structured fields (scorecard, findings, data_available, generated_at).
   
   expected_output: >
-    A final ReviewReport (JSON). Ensure 'data_available' reflects the state of the input doc. All fields in the Pydantic model must be populated.
+    A final ReviewReport (JSON). Ensure 'data_available' reflects the state of the input doc.
+    All fields in the Pydantic model must be populated.
+    The 'deep_dive' field must follow the FORMAT DIRECTIVE above.
   agent: chief_strategist

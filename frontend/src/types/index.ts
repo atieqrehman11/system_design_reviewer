@@ -7,6 +7,8 @@ export enum MessageType {
   ERROR = 'error',
 }
 
+export type OutputFormat = 'markdown' | 'plain' | 'json';
+
 export interface Message {
   id: string;
   type: MessageType;
@@ -27,7 +29,12 @@ export interface ReviewResponse {
 }
 
 export interface ReviewReport {
-  [key: string]: any; // Flexible structure for report content
+  [key: string]: unknown;
+}
+
+export interface ReviewRequest {
+  design_doc: string;
+  output_format?: OutputFormat;
 }
 
 export interface ErrorResponse {

@@ -20,7 +20,7 @@ class Vulnerability(BaseModel):
 
 class SecurityReview(BaseModel):
     """The master schema for the Security Sentinel agent output."""
-    summary: str = Field(..., description="A high-level overview of the system's security posture")
+    summary: str = Field(..., description="Narrative field. Content format depends on output_format: Markdown, plain prose, or minimal.")
     vulnerabilities: List[Vulnerability] = Field(default_factory=list)
     trust_boundary_violations: List[str] = Field(
         default_factory=list, 

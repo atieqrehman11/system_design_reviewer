@@ -1,14 +1,15 @@
 import { API_CONFIG, ERROR_MESSAGES } from '../../config/constants';
-import { ApiError } from '../../types';
+import { ApiError, OutputFormat } from '../../types';
 import { createTimeoutSignal } from '../../utils/signal';
 import { RequestOptions, DEFAULT_TIMEOUT_MS } from './types';
 
 /**
  * Create request body for review submission
  */
-function createRequestBody(designDoc: string, correlationId?: string) {
-  const body: { design_doc: string; correlation_id?: string } = {
+function createRequestBody(designDoc: string, correlationId?: string, outputFormat: OutputFormat = 'markdown') {
+  const body: { design_doc: string; correlation_id?: string; output_format: OutputFormat } = {
     design_doc: designDoc,
+    output_format: outputFormat,
   };
 
   if (correlationId) {
@@ -59,7 +60,7 @@ export async function submitReview(
   options: RequestOptions = {}
 ): Promise<ReadableStream<Uint8Array>> {
   const url = `${API_CONFIG.baseUrl}${API_CONFIG.reviewEndpoint}`;
-  const { signal: userSignal, timeout = DEFAULT_TIMEOUT_MS, correlationId } = options;
+  const { signal: userSignal, timeout = DEFAULT_TIMEOUT_MS, correlationId, outputFormat = 'markdown' } = options;
 
   const { signal, cleanup } = createTimeoutSignal(userSignal, timeout);
 
@@ -69,7 +70,7 @@ export async function submitReview(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(createRequestBody(designDoc, correlationId)),
+      body: JSON.stringify(createRequestBody(designDoc, correlationId, outputFormat)),
       signal,
     });
 

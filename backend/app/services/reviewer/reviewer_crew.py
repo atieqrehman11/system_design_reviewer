@@ -8,6 +8,7 @@ from app.models.final_report_schema import ReviewReport
 from app.models.blueprint_schema import DocBlueprint
 from app.models.security_schema import SecurityReview
 from app.models.performance_schema import PerformanceReview
+from app.config.config import settings
 from typing import List
 
 from app.services.llm import LLMService
@@ -16,9 +17,10 @@ from app.services.llm import LLMService
 class DesignReviewerCrew():
     llm_service = LLMService()
 
-    # Paths to your config files
-    agents_config = '../../config/review/v1/agents.yaml' 
-    tasks_config = '../../config/review/v1/tasks.yaml'
+    # Config version is read from settings — change "reviewer.config_version" to switch
+    _config_version = settings.get_str("reviewer_config_version", "v2")
+    agents_config = f'../../config/review/{_config_version}/agents.yaml'
+    tasks_config  = f'../../config/review/{_config_version}/tasks.yaml'
 
     agents: List[BaseAgent]
     tasks: List[Task]

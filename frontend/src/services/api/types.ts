@@ -1,3 +1,5 @@
+import { OutputFormat } from '../../types';
+
 /**
  * Retry configuration interface
  */
@@ -14,6 +16,7 @@ export interface RequestOptions {
   signal?: AbortSignal;
   timeout?: number;
   correlationId?: string;
+  outputFormat?: OutputFormat;
 }
 
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {

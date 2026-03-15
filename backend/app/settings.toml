@@ -21,3 +21,6 @@ prefix = "/api/v1"
 
 [crewai]
 verbose = true
+
+[reviewer]
+config_version = "v2"

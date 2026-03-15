@@ -29,7 +29,10 @@ class ReviewerService:
                     agent.fingerprint.metadata['correlation_id'] = correlation_id
 
                 # You'll need to pass your listener/queue to the crew configuration
-                crew.kickoff(inputs={'design_doc': design_doc})
+                crew.kickoff(inputs={
+                    'design_doc': design_doc,
+                    'output_format': request.output_format,
+                })
             except Exception as e:
                 message = ReviewResponse(
                     agent="System",

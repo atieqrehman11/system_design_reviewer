@@ -1,7 +1,6 @@
-from app.models.final_report_schema import ReviewReport
 from pydantic import BaseModel
+from typing import Literal, Optional
 
-from typing import Optional
 
 class ErrorResponse(BaseModel):
     success: bool = False
@@ -9,17 +8,21 @@ class ErrorResponse(BaseModel):
     message: str
     error_type: str
     feedback: Optional[str] = None
-    
+
+
 class ReviewRequest(BaseModel):
-    design_doc: str = None
+    design_doc: Optional[str] = None
     correlation_id: Optional[str] = None
+    output_format: Literal["markdown", "plain", "json"] = "markdown"
+
 
 # Define the response schema
 class ReviewResponse(BaseModel):
-    agent: str = None
-    message_type: str = None
-    status: str = None
-    message: str = None
-    report: object = None
+    agent: Optional[str] = None
+    message_type: Optional[str] = None
+    status: Optional[str] = None
+    message: Optional[str] = None
+    report: Optional[object] = None
+
 
 __all__ = ["ReviewRequest", "ReviewResponse"]

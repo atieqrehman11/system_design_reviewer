@@ -21,7 +21,7 @@ class ReviewReport(BaseModel):
     scorecard: Optional[Scorecard] = None
     findings: Optional[List[Finding]] = []
     deep_dive: Optional[str] = Field(
-        None, 
-        description="2-3 paragraphs of deep-dive mentorship on structural issues."
+        None,
+        description="Narrative field. Content format depends on output_format: Markdown, plain prose, or null for json format."
     )
     

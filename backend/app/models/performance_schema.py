@@ -26,12 +26,12 @@ class ScalabilityBlocker(BaseModel):
 
 class ReliabilityScore(BaseModel):
     # conint(ge=0, le=100) ensures the AI provides a valid percentage
-    score: int = Field(..., ge=0, le=100, description="Overall reliability score out of 100")
-    justification: str = Field(..., description="Brief reasoning for the assigned score")
+    score: int = Field(..., ge=0, le=100, description="Overall reliability score out of 100. Plain integer — do not use Markdown.")
+    justification: str = Field(..., description="Narrative field. Content format depends on output_format: Markdown, plain prose, or minimal.")
 
 class PerformanceReview(BaseModel):
     """The master schema for the Performance Architect agent output."""
-    summary: str = Field(..., description="High-level view of system efficiency")
+    summary: str = Field(..., description="Narrative field. Content format depends on output_format: Markdown, plain prose, or minimal.")
     bottlenecks: List[Bottleneck] = Field(default_factory=list)
     scalability_blockers: List[ScalabilityBlocker] = Field(default_factory=list)
     reliability_score: ReliabilityScore

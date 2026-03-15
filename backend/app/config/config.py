@@ -64,7 +64,10 @@ class Settings:
             "azure_api_key": ("AZURE_API_KEY", "azure_api_key", "", str),
             "azure_deployment_name": ("AZURE_DEPLOYMENT_NAME","azure_deployment_name", "", str),
 
-            "crewai_verbose": ("CREWAI_VERBOSE", "crewai.verbose", True, bool)
+            "crewai_verbose": ("CREWAI_VERBOSE", "crewai.verbose", True, bool),
+
+            # Reviewer configuration
+            "reviewer_config_version": ("REVIEWER_CONFIG_VERSION", "reviewer.config_version", "v2", str),
 
         }
         

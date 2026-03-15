@@ -24,7 +24,7 @@ class Interaction(BaseModel):
     nature: Literal["Synchronous", "Asynchronous"]
 
 class TechnicalConstraints(BaseModel):
-    traffic_expectations: str
+    traffic_expectations: List[str] = Field(default_factory=list, description="List of traffic expectations and load characteristics")
     performance_requirements: List[str] = Field(default_factory=list)
     security_requirements: List[str] = Field(default_factory=list)
 
