@@ -3,11 +3,11 @@
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
-  overflow-x: hidden;
   padding: var(--spacing-md) var(--spacing-lg);
   scroll-behavior: smooth;
   position: relative;
   background: transparent;
+  box-sizing: border-box;
 }
 
 .messageListContainer::-webkit-scrollbar {

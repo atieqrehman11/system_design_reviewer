@@ -5,6 +5,8 @@
   animation: fadeIn 0.2s ease-out;
   max-width: 100%;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @keyframes fadeIn {
@@ -14,10 +16,15 @@
 
 /* User message — pill bubble, right-aligned */
 .user {
+  display: flex;
+  justify-content: flex-end;
+  background: transparent;
+  padding: 0;
+}
+
+.user .messageContent {
   background-color: var(--color-surface-container);
   color: var(--color-on-surface);
-  align-self: flex-end;
-  margin-left: auto;
   max-width: 70%;
   max-height: 200px;
   overflow-y: auto;
@@ -31,7 +38,6 @@
 .agentThinking {
   background: transparent;
   color: var(--color-on-surface-variant);
-  align-self: flex-start;
   max-width: 100%;
   padding: var(--spacing-xs) 0;
 }
@@ -39,7 +45,6 @@
 .agentResult {
   background: transparent;
   color: var(--color-on-surface);
-  align-self: flex-start;
   max-width: 100%;
   padding: var(--spacing-xs) 0;
 }
@@ -47,7 +52,6 @@
 .systemComplete {
   background: transparent;
   color: var(--color-success);
-  align-self: flex-start;
   max-width: 100%;
   padding: var(--spacing-xs) 0;
   font-weight: 500;
@@ -56,7 +60,6 @@
 .error {
   background-color: #fce8e6;
   color: var(--color-danger);
-  align-self: flex-start;
   max-width: 100%;
   border-radius: var(--radius-md);
   border-left: 3px solid var(--color-danger);

@@ -71,35 +71,19 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isStreaming = false
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [showScrollButton, setShowScrollButton] = useState(false);
 
-  /**
-   * Scroll to bottom of message list
-   */
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    setAutoScroll(scrollHeight - scrollTop - clientHeight < 50);
+  };
+
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
   };
 
-  /**
-   * Handle scroll event to detect if user scrolled up
-   */
-  const handleScroll = () => {
-    if (!containerRef.current) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-
-    setAutoScroll(isAtBottom);
-    setShowScrollButton(!isAtBottom && messages.length > 0);
-  };
-
-  /**
-   * Auto-scroll when new messages arrive
-   */
   useEffect(() => {
-    if (autoScroll) {
-      scrollToBottom();
-    }
+    if (autoScroll) scrollToBottom();
   }, [messages, autoScroll]);
 
   const messageGroups = groupMessagesByCorrelation(messages);
@@ -141,16 +125,6 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isStreaming = false
           </div>
           <span className={styles.streamingText}>{streamingText}</span>
         </div>
-      )}
-
-      {showScrollButton && (
-        <button
-          className={styles.scrollToBottomButton}
-          onClick={() => scrollToBottom()}
-          aria-label="Scroll to bottom"
-        >
-          ↓ New messages
-        </button>
       )}
 
       <div ref={messagesEndRef} className={styles.scrollAnchor} />
