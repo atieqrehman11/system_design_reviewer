@@ -2,9 +2,9 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders SystemDesignMentor title', () => {
+test('renders System Design Mentor title', () => {
   render(<App />);
-  const titleElement = screen.getByText(/SystemDesignMentor/i);
+  const titleElement = screen.getByText(/System Design Mentor/i);
   expect(titleElement).toBeInTheDocument();
 });
 

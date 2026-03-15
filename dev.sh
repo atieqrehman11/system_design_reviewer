@@ -226,7 +226,7 @@ case "$1" in
         setup_backend_env
         start_backend
         sleep 3  # Give backend time to start
-       # start_frontend
+        start_frontend
         
         echo ""
         echo "🎉 System Design Mentor is running!"
