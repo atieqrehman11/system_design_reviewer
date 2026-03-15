@@ -388,18 +388,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatestResult =
 
       {isExpanded && (
         <>
-          <div className={styles.messageContent}>
-            {message.type === MessageType.AGENT_THINKING ? (
-              <>
-                <div className={styles.markdownContent}>
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
-                </div>
-                <ThinkingIndicator />
-              </>
-            ) : (
-              message.content
-            )}
-          </div>
+          {message.type === MessageType.AGENT_THINKING && (
+            <div className={styles.messageContent}>
+              <div className={styles.markdownContent}>
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
+              <ThinkingIndicator />
+            </div>
+          )}
+          {message.type !== MessageType.AGENT_THINKING && !hasReport && (
+            <div className={styles.messageContent}>{message.content}</div>
+          )}
           {message.report && <ReportContent report={message.report as Record<string, unknown>} />}
         </>
       )}

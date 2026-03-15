@@ -101,7 +101,10 @@ class DesignReviewerCrew():
    
     @task
     def final_review_task(self) -> Task:
-        return Task(config=self.tasks_config['final_review_task'], 
+        return Task(config=self.tasks_config['final_review_task'],
+                    context=[self.extract_blueprint_task(),
+                             self.performance_review_task(),
+                             self.security_review_task()],
                     output_pydantic=ReviewReport,
                     callback=audit_logging_callback)      
               
