@@ -120,6 +120,26 @@ button.messageHeader:hover .agentName {
   margin-left: auto;
 }
 
+/* --- Copy button (visibility override for bubble context) --- */
+
+.bubbleCopyButton {
+  opacity: 0;
+}
+
+.messageBubble:hover .bubbleCopyButton {
+  opacity: 0.35;
+}
+
+.messageBubble:hover .bubbleCopyButton:hover {
+  opacity: 1;
+}
+
+.userCopyWrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.15rem;
+}
+
 /* --- Message body --- */
 
 .messageContent {
