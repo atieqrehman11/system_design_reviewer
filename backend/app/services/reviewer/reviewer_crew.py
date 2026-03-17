@@ -33,12 +33,12 @@ class DesignReviewerCrew():
         return self.llm_service.create_llm(llm_params)
     
     def _validate_extraction(self, output: TaskOutput):
-        # Ensure we check the pydantic object correctly
+        # Log validation issues but do NOT raise — let downstream agents decide how to handle them.
+        # The performance, security, and final tasks already handle is_valid=False gracefully.
         if output.pydantic and hasattr(output.pydantic, 'is_valid'):
             if not output.pydantic.is_valid:
-                raise ValidationFailedException(
-                    feedback=getattr(output.pydantic, 'validation_errors', "Invalid doc.")
-                )
+                errors = getattr(output.pydantic, 'validation_errors', [])
+                print(f"Blueprint validation warnings (non-blocking): {errors}")
         
     
     # --- AGENT FACTORY ---
@@ -111,12 +111,13 @@ class DesignReviewerCrew():
     # --- CREW ---
     @before_kickoff
     def validate_input_content(self, inputs):
-        # Programmatic check: Ensure the input isn't empty or too short
-        if len(inputs.get('design_doc', '')) < 50:
-            raise ValidationFailedException(feedback="The architecture document is too short to be analyzed.")
-        
-        # You can even inject a "Validation Required" flag into the context
-        inputs['validation_strictness'] = "high"
+        # Only reject completely empty or trivially short submissions.
+        # All other quality decisions belong to the analysis agents.
+        doc = inputs.get('design_doc', '').strip()
+        if len(doc) < 50:
+            raise ValidationFailedException(feedback="The document is too short to analyze. Please provide more detail.")
+        if len(doc) > 50000:
+            raise ValidationFailedException(feedback="The document exceeds the maximum allowed length of 50,000 characters.")
         return inputs
     
     @crew

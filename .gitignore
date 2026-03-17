@@ -65,3 +65,5 @@ terraform.tfstate.backup
 crash.log
 
 site
+=*
+.kiro    

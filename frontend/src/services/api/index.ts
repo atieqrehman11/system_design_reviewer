@@ -6,7 +6,7 @@
  */
 
 // Export main API functions
-export { submitReview } from './client';
+export { submitReview, submitReviewWithFile } from './client';
 export { parseNDJSONStream } from './stream';
 export { transformEventToMessage } from './transformer';
 export { submitReviewWithRetry } from './retry';

@@ -68,6 +68,7 @@ class Settings:
 
             # Reviewer configuration
             "reviewer_config_version": ("REVIEWER_CONFIG_VERSION", "reviewer.config_version", "v2", str),
+            "reviewer_max_file_size_mb": ("REVIEWER_MAX_FILE_SIZE_MB", "reviewer.max_file_size_mb", 5, int),
 
         }
         

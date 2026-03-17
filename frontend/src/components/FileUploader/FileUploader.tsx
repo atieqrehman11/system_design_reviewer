@@ -72,7 +72,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         disabled={disabled}
         className={styles.uploadButton}
         aria-label="Attach file"
-        title="Attach file (.txt, .md, .json)"
+        title="Attach file (.txt, .md, .json, .pdf, .doc, .docx)"
       >
         📎
       </button>

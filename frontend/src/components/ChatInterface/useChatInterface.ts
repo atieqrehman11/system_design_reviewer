@@ -3,6 +3,7 @@ import { Message, MessageType } from '../../types';
 import { generateCorrelationId, generateMessageId } from '../../utils';
 import {
   submitReviewWithRetry,
+  submitReviewWithFile,
   parseNDJSONStream,
   transformEventToMessage,
 } from '../../services/api';
@@ -14,19 +15,6 @@ interface UseChatInterfaceReturn {
   error: string | null;
   handleSubmit: (content: string, attachment?: FileAttachment) => void;
   clearError: () => void;
-}
-
-/**
- * Read file content as text for text-based files
- */
-async function readFileContent(file: File): Promise<string> {
-  // For text files, read content directly
-  if (file.type.includes('text') || file.name.endsWith('.md') || file.name.endsWith('.txt')) {
-    return await file.text();
-  }
-  // For other files (PDF, DOC), we'll just send the filename
-  // Backend should handle file processing
-  return `[File: ${file.name}]`;
 }
 
 /**
@@ -68,20 +56,16 @@ export function useChatInterface(): UseChatInterfaceReturn {
     // Execute API call asynchronously
     (async () => {
       try {
-        // Prepare content for API
-        let apiContent = content;
-        if (attachment) {
-          const fileContent = await readFileContent(attachment.file);
-          apiContent = content
-            ? `${content}\n\nFile: ${attachment.name}\n${fileContent}`
-            : fileContent;
-        }
-
-        // Submit to API with retry logic
-        const stream = await submitReviewWithRetry(apiContent, {
-          correlationId,
-          timeout: 60000, // 60 second timeout
-        });
+        // Route to upload endpoint if file attached, otherwise use JSON endpoint
+        const stream = attachment
+          ? await submitReviewWithFile(attachment.file, content, {
+              correlationId,
+              timeout: 60000,
+            })
+          : await submitReviewWithRetry(content, {
+              correlationId,
+              timeout: 60000,
+            });
 
         // Parse NDJSON stream
         await parseNDJSONStream(
@@ -89,13 +73,9 @@ export function useChatInterface(): UseChatInterfaceReturn {
           // onEvent: Handle each event from the stream
           (event) => {
             const message = transformEventToMessage(event, correlationId);
-            console.log('Received message:', message.type, message.agent, 'has report:', !!message.report);
-            
+
             setMessages((prev) => {
-              // Check if we should update an existing message or add a new one
-              // If this is a result, try to update the most recent thinking message from the same agent
               if (message.type === MessageType.AGENT_RESULT && message.agent) {
-                // Find the last thinking message from this agent in this correlation
                 let existingIndex = -1;
                 for (let i = prev.length - 1; i >= 0; i--) {
                   if (
@@ -104,26 +84,16 @@ export function useChatInterface(): UseChatInterfaceReturn {
                     prev[i].type === MessageType.AGENT_THINKING
                   ) {
                     existingIndex = i;
-                    console.log('Found matching thinking message at index:', i, 'for agent:', message.agent);
                     break;
                   }
                 }
 
                 if (existingIndex !== -1) {
-                  // Update the existing thinking message to result
-                  console.log('Updating thinking message to result');
                   const updated = [...prev];
-                  updated[existingIndex] = {
-                    ...message,
-                    id: prev[existingIndex].id, // Keep the same ID for smooth transition
-                  };
+                  updated[existingIndex] = { ...message, id: prev[existingIndex].id };
                   return updated;
-                } else {
-                  console.log('No matching thinking message found, adding as new');
                 }
               }
-
-              // Otherwise, add as new message
               return [...prev, message];
             });
           },

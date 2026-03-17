@@ -16,12 +16,13 @@ export const UI_TEXT = {
 
 // File Upload Configuration
 export const FILE_UPLOAD_CONFIG = {
-  maxFileSizeMB: 10,
-  maxFileSizeBytes: 10 * 1024 * 1024, // 10MB in bytes
-  acceptedFileTypes: ['.txt', '.md', '.pdf', '.doc', '.docx'],
+  maxFileSizeMB: 5,
+  maxFileSizeBytes: 5 * 1024 * 1024, // 5MB in bytes
+  acceptedFileTypes: ['.txt', '.md', '.json', '.pdf', '.doc', '.docx'],
   acceptedMimeTypes: [
     'text/plain',
     'text/markdown',
+    'application/json',
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
