@@ -56,7 +56,7 @@ async def review_design_document(
     """Submit a design document as JSON text for review."""
     request = ReviewRequest(
         design_doc=data.design_doc,
-        correlation_id=x_a2a_task_id or str(uuid.uuid4()),
+        correlation_id=x_a2a_task_id or data.correlation_id or str(uuid.uuid4()),
         output_format=data.output_format,
     )
     return _build_streaming_response(request)

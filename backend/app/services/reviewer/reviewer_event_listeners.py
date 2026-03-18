@@ -1,6 +1,5 @@
 from app.models.api_schema import ReviewResponse
 from crewai.events import (
-    CrewKickoffCompletedEvent,
     AgentExecutionStartedEvent,
     TaskCompletedEvent
 )
@@ -13,20 +12,10 @@ class ReviewerEventListener(BaseEventListener):
 
     def setup_listeners(self, crewai_event_bus):
         """Set up event listeners with the CrewAI event bus."""
-
-        @crewai_event_bus.on(CrewKickoffCompletedEvent)
-        def on_crew_completed(source, event):
-            correlation_id = getattr(source.config, 'correlation_id', None)
-            if not correlation_id:
-                print(f"No correlation_id found in event metadata; skipping dispatch. for event: {event}")
-                return  # Don't process events without a correlation_id
-            
-            message = ReviewResponse(
-                status="complete", 
-                message=f"'{event.crew_name}' has completed design review!"
-            )
-            
-            self.dispatcher.dispatch(correlation_id, message)
+        # NOTE: CrewKickoffCompletedEvent is intentionally NOT handled here.
+        # The "complete" status is dispatched manually from ReviewerService after
+        # save_review() succeeds, ensuring the SQLite row exists before the
+        # frontend enters follow-up mode.
 
         @crewai_event_bus.on(AgentExecutionStartedEvent)
         def on_agent_execution_started(source, event):
@@ -51,9 +40,15 @@ class ReviewerEventListener(BaseEventListener):
         def on_task_completed(source, event):   
             print("Received TaskCompletedEvent")
             
+            if not event.output or not event.output.pydantic:
+                print("TaskCompletedEvent has no pydantic output; skipping dispatch.")
+                return
+
             event_output = event.output.pydantic.model_dump(exclude_none=True)
             assigned_agent = source.agent if source.agent else None
-            
+            correlation_id = None
+            agent_name = 'Reviewer'
+
             if assigned_agent:
                 agent_name = assigned_agent.fingerprint.metadata.get("display_name", assigned_agent.role)
                 correlation_id = assigned_agent.fingerprint.metadata.get("correlation_id", None)
@@ -63,7 +58,7 @@ class ReviewerEventListener(BaseEventListener):
                 return  # Don't process events without a correlation_id
             
             message = ReviewResponse(
-                agent = agent_name,
+                agent=agent_name,
                 message_type="result",
                 source=source,
                 event=event,

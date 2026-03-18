@@ -88,3 +88,5 @@ components/
 - Ensure the functions/lib is not deprecated
 - Ensure the code generated must not have any sonarqube issues and code smells
 - Ensure the code generated must adhare to standards. created in its best place to avoid any technical debt
+- Ensure the best place for any method if it can be part of a class then it must be added to the class. 
+- Always ensure Single Responsitiblity rule for method/class level and keep the methods testable

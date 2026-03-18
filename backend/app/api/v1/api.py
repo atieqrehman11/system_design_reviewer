@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request
-from app.api.v1.endpoints import status, review 
+from app.api.v1.endpoints import status, review, chat
 from app.models.api_schema import ReviewRequest, ReviewResponse
 
 api_router = APIRouter()
@@ -7,6 +7,7 @@ api_router = APIRouter()
 # Register the individual routers
 api_router.include_router(status.router, prefix="/v1", tags=["App Status"])
 api_router.include_router(review.router, prefix="/v1/review", tags=["Architecture Design Review"])
+api_router.include_router(chat.router, prefix="/v1/chat", tags=["Follow-up Chat"])
 
 @api_router.get("/.well-known/reviewer-card.json")
 async def get_agent_card(request: Request):

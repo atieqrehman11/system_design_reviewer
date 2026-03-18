@@ -66,8 +66,12 @@ class Settings:
 
             "crewai_verbose": ("CREWAI_VERBOSE", "crewai.verbose", True, bool),
 
+            # Chat LLM configuration
+            "chat_model": ("CHAT_MODEL", "chat.model", "openai/gpt-4o", str),
+            "chat_temperature": ("CHAT_TEMPERATURE", "chat.temperature", 0.3, float),
+            "chat_max_tokens": ("CHAT_MAX_TOKENS", "chat.max_tokens", 1024, int),
+
             # Reviewer configuration
-            "reviewer_config_version": ("REVIEWER_CONFIG_VERSION", "reviewer.config_version", "v2", str),
             "reviewer_max_file_size_mb": ("REVIEWER_MAX_FILE_SIZE_MB", "reviewer.max_file_size_mb", 5, int),
 
         }
@@ -153,7 +157,13 @@ class Settings:
                 return int(float(val_str))
             except (ValueError, TypeError):
                 return 0
-                
+
+        elif val_type == float:
+            try:
+                return float(val_str)
+            except (ValueError, TypeError):
+                return 0.0
+
         elif val_type == list:
             if not val_str:
                 return []

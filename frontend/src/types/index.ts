@@ -37,6 +37,23 @@ export interface ReviewRequest {
   output_format?: OutputFormat;
 }
 
+// Chat follow-up types
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatRequest {
+  correlation_id: string;
+  messages: ChatMessage[];
+}
+
+export interface ChatChunkResponse {
+  chunk?: string;
+  status?: 'complete' | 'error';
+  message?: string;
+}
+
 export interface ErrorResponse {
   success: boolean;
   status_code: number;

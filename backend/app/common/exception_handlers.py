@@ -9,6 +9,12 @@ class ValidationFailedException(Exception):
         self.feedback = feedback
         super().__init__(self.feedback)
 
+
+class ReviewSessionNotFoundException(Exception):
+    def __init__(self, correlation_id: str):
+        self.message = f"Review session '{correlation_id}' not found. Submit a design document for review first."
+        super().__init__(self.message)
+
 def register_exception_handlers(app: FastAPI):
 
     @app.exception_handler(Exception)
@@ -57,6 +63,22 @@ def register_exception_handlers(app: FastAPI):
                 "message": error_message,
                 "error_type": "AZURE_RESOURCE_NOT_FOUND",
                 "hint": "Ensure your AZURE_ENDPOINT is the base URL and does not include '/openai/deployments/..."
+            }
+        )
+
+    @app.exception_handler(ReviewSessionNotFoundException)
+    async def review_session_not_found_handler(request: Request, exc: ReviewSessionNotFoundException):
+        stack_trace = traceback.format_exc()
+        logger.error(f"Review session not found: {exc.message}\n{stack_trace}")
+        status_code = 404
+
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "success": False,
+                "status_code": status_code,
+                "message": exc.message,
+                "error_type": "REVIEW_SESSION_NOT_FOUND",
             }
         )
     

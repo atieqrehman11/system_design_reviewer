@@ -57,6 +57,13 @@
   font-weight: 500;
 }
 
+.systemCompleteRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-weight: 500;
+}
+
 .error {
   background-color: #fce8e6;
   color: var(--color-danger);

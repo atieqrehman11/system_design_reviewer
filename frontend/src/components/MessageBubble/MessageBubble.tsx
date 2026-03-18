@@ -59,54 +59,65 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatestResult =
 
   return (
     <div className={`${styles.messageBubble} ${messageClass}`}>
-      {showHeader && (
-        hasReport ? (
-          <button
-            className={styles.messageHeader}
-            onClick={toggleExpanded}
-            aria-expanded={isExpanded}
-          >
-            <div className={styles.headerLeft}>
-              {icon && <span className={styles.messageIcon}>{icon}</span>}
-              {message.agent && <span className={styles.agentName}>{message.agent}</span>}
-              <span className={styles.collapseIndicator}>{isExpanded ? '▼' : '▶'}</span>
-            </div>
-            <span className={styles.timestamp}>{formatTimestamp(message.timestamp)}</span>
-            <CopyButton text={copyText} className={styles.bubbleCopyButton} />
-          </button>
-        ) : (
-          <div className={styles.messageHeader}>
-            <div className={styles.headerLeft}>
-              {icon && <span className={styles.messageIcon}>{icon}</span>}
-              {message.agent && <span className={styles.agentName}>{message.agent}</span>}
-            </div>
-            <span className={styles.timestamp}>{formatTimestamp(message.timestamp)}</span>
-            <CopyButton text={copyText} className={styles.bubbleCopyButton} />
-          </div>
-        )
-      )}
-
-      {message.type === MessageType.USER && (
-        <div className={styles.userCopyWrapper}>
-          <CopyButton text={copyText} />
+      {message.type === MessageType.SYSTEM_COMPLETE ? (
+        <div className={styles.systemCompleteRow}>
+          <span className={styles.messageIcon}>{icon}</span>
+          <span>{message.content}</span>
+          <span className={styles.timestamp}>{formatTimestamp(message.timestamp)}</span>
+          <CopyButton text={copyText} className={styles.bubbleCopyButton} />
         </div>
-      )}
-
-      {isExpanded && (
+      ) : (
         <>
-          {message.type === MessageType.AGENT_THINKING && (
-            <div className={styles.messageContent}>
-              <div className={styles.markdownContent}>
-                <ReactMarkdown>{message.content}</ReactMarkdown>
+          {showHeader && (
+            hasReport ? (
+              <button
+                className={styles.messageHeader}
+                onClick={toggleExpanded}
+                aria-expanded={isExpanded}
+              >
+                <div className={styles.headerLeft}>
+                  {icon && <span className={styles.messageIcon}>{icon}</span>}
+                  {message.agent && <span className={styles.agentName}>{message.agent}</span>}
+                  <span className={styles.collapseIndicator}>{isExpanded ? '▼' : '▶'}</span>
+                </div>
+                <span className={styles.timestamp}>{formatTimestamp(message.timestamp)}</span>
+                <CopyButton text={copyText} className={styles.bubbleCopyButton} />
+              </button>
+            ) : (
+              <div className={styles.messageHeader}>
+                <div className={styles.headerLeft}>
+                  {icon && <span className={styles.messageIcon}>{icon}</span>}
+                  {message.agent && <span className={styles.agentName}>{message.agent}</span>}
+                </div>
+                <span className={styles.timestamp}>{formatTimestamp(message.timestamp)}</span>
+                <CopyButton text={copyText} className={styles.bubbleCopyButton} />
               </div>
-              <ThinkingIndicator />
+            )
+          )}
+
+          {message.type === MessageType.USER && (
+            <div className={styles.userCopyWrapper}>
+              <CopyButton text={copyText} />
             </div>
           )}
-          {message.type !== MessageType.AGENT_THINKING && !hasReport && (
-            <div className={styles.messageContent}>{message.content}</div>
-          )}
-          {message.report && (
-            <ReportContent report={message.report as Record<string, unknown>} />
+
+          {isExpanded && (
+            <>
+              {message.type === MessageType.AGENT_THINKING && (
+                <div className={styles.messageContent}>
+                  <div className={styles.markdownContent}>
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
+                  <ThinkingIndicator />
+                </div>
+              )}
+              {message.type !== MessageType.AGENT_THINKING && !hasReport && (
+                <div className={styles.messageContent}>{message.content}</div>
+              )}
+              {message.report && (
+                <ReportContent report={message.report as Record<string, unknown>} />
+              )}
+            </>
           )}
         </>
       )}

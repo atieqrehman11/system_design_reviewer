@@ -36,3 +36,8 @@ AZURE_API_VERSION="azure_api_version"
 AZURE_ENDPOINT="azure_endpoint"
 AZURE_API_KEY="azure_api_key"
 AZURE_DEPLOYMENT_NAME="azure_deployment_name"
+
+# Chat LLM configuration
+CHAT_MODEL = "chat_model"
+CHAT_TEMPERATURE = "chat_temperature"
+CHAT_MAX_TOKENS = "chat_max_tokens"

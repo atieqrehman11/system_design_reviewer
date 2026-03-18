@@ -1,7 +1,7 @@
 import { ERROR_MESSAGES } from '../../config/constants';
 import { ApiError } from '../../types';
 import { submitReview } from './client';
-import { RequestOptions, RetryConfig, DEFAULT_RETRY_CONFIG } from './types';
+import { RequestOptions, RetryConfig, DEFAULT_RETRY_CONFIG, ReviewStreamResult } from './types';
 
 /**
  * Check if error should be retried
@@ -48,7 +48,7 @@ export async function submitReviewWithRetry(
   designDoc: string,
   options: RequestOptions = {},
   retryConfig: Partial<RetryConfig> = {}
-): Promise<ReadableStream<Uint8Array>> {
+): Promise<ReviewStreamResult> {
   const config = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
   let lastError: Error;
 

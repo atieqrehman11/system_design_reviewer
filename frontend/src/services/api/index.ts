@@ -10,7 +10,8 @@ export { submitReview, submitReviewWithFile } from './client';
 export { parseNDJSONStream } from './stream';
 export { transformEventToMessage } from './transformer';
 export { submitReviewWithRetry } from './retry';
+export { submitChat } from './chatClient';
 
 // Export types
-export type { RetryConfig, RequestOptions } from './types';
+export type { RetryConfig, RequestOptions, ReviewStreamResult } from './types';
 export { DEFAULT_RETRY_CONFIG, DEFAULT_TIMEOUT_MS } from './types';

@@ -23,5 +23,9 @@ prefix = "/api/v1"
 verbose = true
 
 [reviewer]
-config_version = "v2"
 max_file_size_mb = 5
+
+[chat]
+model = "openai/gpt-4o"
+temperature = 0.3
+max_tokens = 1024

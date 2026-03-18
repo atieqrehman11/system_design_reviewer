@@ -8,19 +8,34 @@ from app.models.final_report_schema import ReviewReport
 from app.models.blueprint_schema import DocBlueprint
 from app.models.security_schema import SecurityReview
 from app.models.performance_schema import PerformanceReview
-from app.config.config import settings
 from typing import List
 
 from app.services.llm import LLMService
+
+# Keywords that strongly suggest a system/software design document.
+# At least one must be present for the submission to be accepted.
+_DESIGN_KEYWORDS = {
+    "architecture", "system", "design", "service", "api", "database", "schema",
+    "component", "microservice", "endpoint", "scalab", "deploy", "infrastructure",
+    "backend", "frontend", "server", "client", "cache", "queue", "event",
+    "security", "auth", "storage", "network", "protocol", "integration",
+    "module", "interface", "data model", "flow", "pipeline", "cluster",
+    "container", "kubernetes", "docker", "cloud", "aws", "azure", "gcp",
+    "load balanc", "cdn", "latency", "throughput", "availability", "reliability",
+}
+
+
+def _looks_like_design_doc(text: str) -> bool:
+    """Return True if the text contains at least one design/architecture keyword."""
+    lower = text.lower()
+    return any(kw in lower for kw in _DESIGN_KEYWORDS)
 
 @CrewBase
 class DesignReviewerCrew():
     llm_service = LLMService()
 
-    # Config version is read from settings — change "reviewer.config_version" to switch
-    _config_version = settings.get_str("reviewer_config_version", "v2")
-    agents_config = f'../../config/review/{_config_version}/agents.yaml'
-    tasks_config  = f'../../config/review/{_config_version}/tasks.yaml'
+    agents_config = '../../config/review/v1/agents.yaml'
+    tasks_config  = '../../config/review/v1/tasks.yaml'
 
     agents: List[BaseAgent]
     tasks: List[Task]
@@ -111,13 +126,27 @@ class DesignReviewerCrew():
     # --- CREW ---
     @before_kickoff
     def validate_input_content(self, inputs):
-        # Only reject completely empty or trivially short submissions.
-        # All other quality decisions belong to the analysis agents.
         doc = inputs.get('design_doc', '').strip()
+        if len(doc) == 0:
+            raise ValidationFailedException(
+                feedback="Please provide a design document to review."
+            )
+        if not _looks_like_design_doc(doc):
+            raise ValidationFailedException(
+                feedback=(
+                    "I'm designed to review system design and architecture documents. "
+                    "Please submit a design document — such as an architecture overview, "
+                    "API design, or technical specification — and I'll be happy to help."
+                )
+            )
         if len(doc) < 50:
-            raise ValidationFailedException(feedback="The document is too short to analyze. Please provide more detail.")
+            raise ValidationFailedException(
+                feedback="The document is too short to analyze. Please provide more detail."
+            )
         if len(doc) > 50000:
-            raise ValidationFailedException(feedback="The document exceeds the maximum allowed length of 50,000 characters.")
+            raise ValidationFailedException(
+                feedback="The document exceeds the maximum allowed length of 50,000 characters."
+            )
         return inputs
     
     @crew

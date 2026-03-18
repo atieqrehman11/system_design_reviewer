@@ -13,10 +13,29 @@ class LLMService():
         """Helper to build an LLM from YAML config"""
         use_azure = settings.get(USE_AZURE_OPENAI, False)
         if use_azure:
-            return self._azure_llm(llm_params)
+            return self._azure_llm()
         else:
             return self._openai_llm(llm_params)
-        
+
+    def get_litellm_params(self, llm_params: dict) -> dict:
+        """
+        Return a flat dict of model + provider kwargs suitable for
+        passing directly to litellm.acompletion / litellm.completion.
+        Centralises Azure vs OpenAI resolution so callers don't need
+        to inspect the provider themselves.
+        """
+        use_azure = settings.get(USE_AZURE_OPENAI, False)
+        if use_azure:
+            return {
+                "model": "azure/" + settings.get(AZURE_DEPLOYMENT_NAME, ""),
+                "api_key": settings.get(AZURE_API_KEY),
+                "api_base": settings.get(AZURE_ENDPOINT),
+                "api_version": settings.get(AZURE_API_VERSION),
+            }
+        return {
+            "model": llm_params.get("model"),
+        }
+
     def _openai_llm(self, llm_params: dict) -> LLM:
         """Helper to build an OpenAI LLM from YAML config"""
         
@@ -26,7 +45,7 @@ class LLMService():
             top_p=llm_params.get('top_p')
         )
     
-    def _azure_llm(self, llm_params: dict) -> LLM:
+    def _azure_llm(self) -> LLM:
         """Helper to build an Azure LLM from YAML config"""
         
         return LLM(

@@ -1,5 +1,2 @@
-/**
- * InputArea component
- * Barrel export for clean imports
- */
 export { default } from './InputArea';
+export type { InputAreaProps } from './InputArea';

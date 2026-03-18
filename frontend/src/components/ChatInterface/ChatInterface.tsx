@@ -6,12 +6,9 @@ import InputArea from '../InputArea';
 import type { FileAttachment } from '../FileUploader';
 import styles from './ChatInterface.module.css';
 
-/**
- * Main chat interface component
- * Displays messages and handles user input with enhanced streaming feedback
- */
 const ChatInterface: React.FC = () => {
-  const { messages, isStreaming, error, handleSubmit } = useChatInterface();
+  const { messages, isStreaming, isFollowUpMode, error, handleSubmit, resetSession } =
+    useChatInterface();
 
   const onSubmit = (content: string, attachment?: FileAttachment) => {
     handleSubmit(content, attachment);
@@ -21,17 +18,18 @@ const ChatInterface: React.FC = () => {
     <div className={styles.chatContainer}>
       <header className={styles.header}>
         <h1>{UI_TEXT.appTitle}</h1>
-        <p>{UI_TEXT.appSubtitle}</p>
-        {isStreaming && (
-          <div className={styles.streamingBadge}>
-            <span className={styles.streamingPulse} />
-            <span>Processing review...</span>
-          </div>
-        )}
+        <div className={styles.headerRight}>
+          {isStreaming && (
+            <div className={styles.streamingBadge}>
+              <span className={styles.streamingPulse} />
+              <span>{isFollowUpMode ? 'Thinking...' : 'Processing...'}</span>
+            </div>
+          )}
+        </div>
       </header>
 
       {error && (
-        <div className={styles.errorBanner}>
+        <div className={styles.errorBanner} role="alert">
           <strong>⚠️ Error:</strong> {error}
         </div>
       )}
@@ -41,16 +39,20 @@ const ChatInterface: React.FC = () => {
           <div className={styles.placeholder}>
             <div className={styles.placeholderIcon}>💬</div>
             <p>{UI_TEXT.emptyStateMessage}</p>
-            <p className={styles.placeholderHint}>
-              Submit a design document to get started with your architectural review
-            </p>
+            
           </div>
         ) : (
           <MessageList messages={messages} isStreaming={isStreaming} />
         )}
       </div>
 
-      <InputArea onSubmit={onSubmit} disabled={isStreaming} />
+      <InputArea
+        onSubmit={onSubmit}
+        disabled={isStreaming}
+        placeholder={isFollowUpMode ? UI_TEXT.chatPlaceholder : UI_TEXT.inputPlaceholder}
+        showFileUpload={!isFollowUpMode}
+        onNewReview={isFollowUpMode ? resetSession : undefined}
+      />
     </div>
   );
 };

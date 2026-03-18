@@ -8,6 +8,7 @@ from app.api.v1.api import api_router
 
 from app.common.exception_handlers import register_exception_handlers
 from app.config.config import settings
+from app.services.review_store import init_db
 from app.config.config_keys import (
     APP_NAME, APP_DESCRIPTION, APP_VERSION, APP_DEBUG,
     CORS_ORIGINS, CORS_CREDENTIALS, CORS_METHODS, CORS_HEADERS,
@@ -33,6 +34,9 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 
 register_exception_handlers(app)
+
+# Initialise SQLite schema on startup
+init_db()
 
 if __name__ == "__main__":
     import uvicorn

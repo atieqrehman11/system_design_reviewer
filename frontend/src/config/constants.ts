@@ -2,6 +2,7 @@
 export const API_CONFIG = {
   baseUrl: process.env.REACT_APP_API_BASE_URL || '/api/v1',
   reviewEndpoint: '/review',
+  chatEndpoint: '/chat',
 };
 
 // UI Text Constants
@@ -9,9 +10,10 @@ export const UI_TEXT = {
   appTitle: 'System Design Mentor',
   appSubtitle: 'AI-powered architecture analysis and recommendations',
   inputPlaceholder: 'Paste your design document here or upload a file...',
+  chatPlaceholder: 'Ask a follow-up question about the review...',
   submitButtonText: 'Review Design',
   fileUploadText: 'Upload File',
-  emptyStateMessage: 'Submit a design document to receive architectural analysis',
+  emptyStateMessage: 'Submit a design document to get started with your architectural review',
 };
 
 // File Upload Configuration

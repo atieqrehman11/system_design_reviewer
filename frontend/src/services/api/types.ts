@@ -15,7 +15,6 @@ export interface RetryConfig {
 export interface RequestOptions {
   signal?: AbortSignal;
   timeout?: number;
-  correlationId?: string;
   outputFormat?: OutputFormat;
 }
 
@@ -26,6 +25,15 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
 };
 
 export const DEFAULT_TIMEOUT_MS = 30000; // 30 seconds
+
+/**
+ * Result returned by review submission functions, containing the
+ * raw response stream and the server-assigned correlation ID.
+ */
+export interface ReviewStreamResult {
+  stream: ReadableStream<Uint8Array>;
+  correlationId: string;
+}
 
 // Constants for event types
 export const EVENT_TYPES = {

@@ -1,7 +1,7 @@
 import { API_CONFIG, ERROR_MESSAGES } from '../../config/constants';
 import { ApiError, OutputFormat } from '../../types';
 import { createTimeoutSignal } from '../../utils/signal';
-import { RequestOptions, DEFAULT_TIMEOUT_MS } from './types';
+import { RequestOptions, DEFAULT_TIMEOUT_MS, ReviewStreamResult } from './types';
 
 // --- Error handlers ---
 
@@ -31,7 +31,7 @@ async function executeRequest(
   url: string,
   init: RequestInit,
   options: RequestOptions,
-): Promise<ReadableStream<Uint8Array>> {
+): Promise<ReviewStreamResult> {
   const { signal: userSignal, timeout = DEFAULT_TIMEOUT_MS } = options;
   const { signal, cleanup } = createTimeoutSignal(userSignal, timeout);
 
@@ -42,7 +42,9 @@ async function executeRequest(
     if (!response.ok) await handleResponseError(response);
     if (!response.body) throw new ApiError('No response body received from server');
 
-    return response.body;
+    const correlationId = response.headers.get('X-Task-ID') ?? '';
+
+    return { stream: response.body, correlationId };
   } catch (error) {
     cleanup();
     handleFetchError(error);
@@ -57,14 +59,13 @@ async function executeRequest(
 export async function submitReview(
   designDoc: string,
   options: RequestOptions = {},
-): Promise<ReadableStream<Uint8Array>> {
-  const { correlationId, outputFormat = 'markdown' } = options;
+): Promise<ReviewStreamResult> {
+  const { outputFormat = 'markdown' } = options;
 
-  const body: { design_doc: string; correlation_id?: string; output_format: OutputFormat } = {
+  const body: { design_doc: string; output_format: OutputFormat } = {
     design_doc: designDoc,
     output_format: outputFormat,
   };
-  if (correlationId) body.correlation_id = correlationId;
 
   return executeRequest(
     `${API_CONFIG.baseUrl}${API_CONFIG.reviewEndpoint}`,
@@ -80,14 +81,13 @@ export async function submitReviewWithFile(
   file: File,
   designDoc: string,
   options: RequestOptions = {},
-): Promise<ReadableStream<Uint8Array>> {
-  const { correlationId, outputFormat = 'markdown' } = options;
+): Promise<ReviewStreamResult> {
+  const { outputFormat = 'markdown' } = options;
 
   const formData = new FormData();
   formData.append('file', file);
   if (designDoc) formData.append('design_doc', designDoc);
   formData.append('output_format', outputFormat);
-  if (correlationId) formData.append('correlation_id', correlationId);
 
   // No Content-Type header — browser sets multipart boundary automatically
   return executeRequest(

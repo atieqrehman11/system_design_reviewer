@@ -4,16 +4,25 @@ import FileUploader, { type FileAttachment, formatFileSize } from '../FileUpload
 import { useInputArea, MAX_CHARS } from './useInputArea';
 import styles from './InputArea.module.css';
 
-interface InputAreaProps {
+export interface InputAreaProps {
   onSubmit: (content: string, attachment?: FileAttachment) => void;
   disabled?: boolean;
+  placeholder?: string;
+  showFileUpload?: boolean;
+  onNewReview?: () => void;
 }
 
 /**
  * InputArea component
  * Handles text input and file attachments
  */
-const InputArea: React.FC<InputAreaProps> = ({ onSubmit, disabled = false }) => {
+const InputArea: React.FC<InputAreaProps> = ({
+  onSubmit,
+  disabled = false,
+  placeholder = UI_TEXT.inputPlaceholder,
+  showFileUpload = true,
+  onNewReview,
+}) => {
   const {
     inputValue,
     attachment,
@@ -55,7 +64,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSubmit, disabled = false }) => 
           <textarea
             ref={textareaRef}
             className={styles.textarea}
-            placeholder={UI_TEXT.inputPlaceholder}
+            placeholder={placeholder}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -70,7 +79,20 @@ const InputArea: React.FC<InputAreaProps> = ({ onSubmit, disabled = false }) => 
         </div>
 
         <div className={styles.buttonGroup}>
-          <FileUploader onFileSelect={handleFileSelect} disabled={disabled} />
+          {onNewReview && (
+            <button
+              type="button"
+              onClick={onNewReview}
+              className={styles.newReviewButton}
+              aria-label="Start a new review"
+              title="New review"
+            >
+              ↺
+            </button>
+          )}
+          {showFileUpload && (
+            <FileUploader onFileSelect={handleFileSelect} disabled={disabled} />
+          )}
           <button
             type="button"
             onClick={handleSubmit}

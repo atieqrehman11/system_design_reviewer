@@ -32,6 +32,12 @@
   display: none; /* Hidden in Gemini style — subtitle not shown in header */
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
 .streamingBadge {
   display: inline-flex;
   align-items: center;
