@@ -6,7 +6,6 @@ import os
 from typing import List, Any
 from pathlib import Path
 from dynaconf import Dynaconf
-import traceback
 
 class Settings:
     _instance = None
@@ -14,11 +13,11 @@ class Settings:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(Settings, cls).__new__(cls)
-            # Put your initialization logic here
-            print("Settings initialized for the first time")
         return cls._instance
     
     def __init__(self):
+        if getattr(self, "_initialized", False):
+            return
         # Initialize Dynaconf as the canonical runtime loader (TOML + env vars)
         base = Path(__file__).parent.parent
         toml_path = base / 'settings.toml'
@@ -66,6 +65,11 @@ class Settings:
 
             "crewai_verbose": ("CREWAI_VERBOSE", "crewai.verbose", True, bool),
 
+            # Azure LLM generation params
+            "azure_llm_temperature": ("AZURE_LLM_TEMPERATURE", "azure_llm.temperature", 1.0, float),
+            "azure_llm_top_p": ("AZURE_LLM_TOP_P", "azure_llm.top_p", 1.0, float),
+            "azure_llm_max_completion_tokens": ("AZURE_LLM_MAX_COMPLETION_TOKENS", "azure_llm.max_completion_tokens", 4096, int),
+
             # Chat LLM configuration
             "chat_model": ("CHAT_MODEL", "chat.model", "openai/gpt-4o", str),
             "chat_temperature": ("CHAT_TEMPERATURE", "chat.temperature", 0.3, float),
@@ -74,11 +78,15 @@ class Settings:
             # Reviewer configuration
             "reviewer_max_file_size_mb": ("REVIEWER_MAX_FILE_SIZE_MB", "reviewer.max_file_size_mb", 5, int),
 
+            # Storage
+            "db_path": ("DB_PATH", "storage.db_path", "", str),
+
         }
         
         # Load all configuration values
         self._config = {}
         self._load_config()
+        self._initialized = True
     
     def _load_config(self):
         """Load all configuration values"""
@@ -102,39 +110,42 @@ class Settings:
         """Lookup a dotted key in the Dynaconf settings, returning None if missing."""
         if not dotted_key:
             return None
+        node = self._load_dynaconf_dict()
+        if node is None:
+            return None
+        return self._walk_dotted_key(node, dotted_key)
+
+    def _load_dynaconf_dict(self) -> Any:
+        """Return the Dynaconf settings as a plain dict, or None on failure."""
         try:
-            node = self._dynaconf.as_dict()
+            return self._dynaconf.as_dict()
         except Exception:
             try:
-                node = dict(self._dynaconf)
+                return dict(self._dynaconf)
             except Exception:
                 return None
 
-        parts = dotted_key.split('.')
-        cur = node
+    @staticmethod
+    def _find_key_case_insensitive(node: dict, part: str) -> Any:
+        """Return the value for *part* in *node* using case-insensitive matching."""
+        lower_part = part.lower()
+        for k in node:
+            try:
+                if k.lower() == lower_part:
+                    return node[k]
+            except Exception:
+                continue
+        return None
 
-        # Walk the nested dict using case-insensitive key matching so keys
-        # like "APP" in Dynaconf/TOML map correctly to dotted keys like "app.name".
-        for p in parts:
+    def _walk_dotted_key(self, node: Any, dotted_key: str) -> Any:
+        """Walk a nested dict using a dotted key path with case-insensitive matching."""
+        cur = node
+        for part in dotted_key.split('.'):
             if not isinstance(cur, dict):
                 return None
-
-            # Find a matching key in the current node case-insensitively
-            match_key = None
-            lower_p = p.lower()
-            for k in cur.keys():
-                try:
-                    if k.lower() == lower_p:
-                        match_key = k
-                        break
-                except Exception:
-                    continue
-
-            if match_key is None:
+            cur = self._find_key_case_insensitive(cur, part)
+            if cur is None:
                 return None
-
-            cur = cur[match_key]
-
         return cur
     
     def _convert_value(self, value: Any, val_type: type) -> Any:

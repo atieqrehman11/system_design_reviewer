@@ -1,6 +1,6 @@
 # API Reference
 
-This document provides detailed information about the System Design Mentor API endpoints.
+This document describes the System Design Mentor API endpoints.
 
 ## Base URL
 
@@ -8,19 +8,17 @@ This document provides detailed information about the System Design Mentor API e
 http://localhost:8000/api/v1
 ```
 
-For production deployments, replace with your production URL.
-
 ## Authentication
 
-Currently, the API does not require authentication for development. Authentication will be added in future versions.
+No authentication is required in development. Production deployments should add appropriate auth middleware.
+
+---
 
 ## Endpoints
 
 ### Health Check
 
-Check the API status and version.
-
-**Endpoint**: `GET /api/v1/status`
+**`GET /api/v1/status`**
 
 **Response**:
 ```json
@@ -31,289 +29,295 @@ Check the API status and version.
 }
 ```
 
-**Status Codes**:
-- `200 OK`: Service is healthy
-
-**Example**:
 ```bash
 curl http://localhost:8000/api/v1/status
 ```
 
 ---
 
-### Submit Architecture Review
+### Submit Review (JSON)
 
-Submit an architecture design document for AI-powered review.
+**`POST /api/v1/review`**
 
-**Endpoint**: `POST /api/v1/review`
+Submit a design document as JSON text. Returns a streaming NDJSON response.
 
 **Request Headers**:
 ```
 Content-Type: application/json
+X-Correlation-ID: <client-generated UUID>   # optional; UUID generated server-side if absent
 ```
 
 **Request Body**:
 ```json
 {
-  "content": "string",
-  "format": "markdown",
-  "options": {
-    "focus_areas": ["scalability", "security", "reliability"],
-    "detail_level": "comprehensive"
-  }
+  "design_doc": "## System Overview\nA web platform for...",
+  "output_format": "markdown"
 }
 ```
 
-**Parameters**:
-- `content` (required, string): The architecture design document content
-- `format` (optional, string): Document format. Default: "markdown"
-- `options` (optional, object): Review configuration options
-  - `focus_areas` (optional, array): Specific areas to focus on
-  - `detail_level` (optional, string): Level of detail ("brief", "standard", "comprehensive")
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `design_doc` | string | Yes | Architecture document content |
+| `output_format` | string | No | `markdown` (default), `plain`, or `json` |
 
-**Response**:
-```json
-{
-  "review_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "completed",
-  "analysis": {
-    "scalability": {
-      "score": 7,
-      "issues": [
-        "Single database instance creates bottleneck",
-        "No horizontal scaling strategy defined"
-      ],
-      "recommendations": [
-        "Implement database read replicas",
-        "Add load balancer for horizontal scaling"
-      ]
-    },
-    "security": {
-      "score": 4,
-      "issues": [
-        "Unencrypted database",
-        "Weak authentication mechanism"
-      ],
-      "recommendations": [
-        "Enable database encryption at rest",
-        "Implement OAuth 2.0 or JWT authentication"
-      ]
-    },
-    "reliability": {
-      "score": 5,
-      "issues": [
-        "Single point of failure in database",
-        "No backup strategy mentioned"
-      ],
-      "recommendations": [
-        "Implement database replication",
-        "Set up automated backups"
-      ]
-    },
-    "performance": {
-      "score": 6,
-      "issues": [
-        "Synchronous report generation blocks main thread"
-      ],
-      "recommendations": [
-        "Move report generation to background queue"
-      ]
-    }
-  },
-  "summary": "The architecture shows promise but has critical security and scalability concerns...",
-  "overall_score": 5.5,
-  "timestamp": "2026-03-01T12:00:00Z",
-  "processing_time_ms": 3500
-}
-```
+**Response**: `200 OK` — `application/x-ndjson` stream of `ReviewResponse` events (see [Stream Events](#stream-events)).
 
-**Status Codes**:
-- `200 OK`: Review completed successfully
-- `400 Bad Request`: Invalid request body
-- `422 Unprocessable Entity`: Validation error
-- `500 Internal Server Error`: Server error during processing
+**Error responses**:
+- `400` — missing or invalid input
+- `422` — validation error (Pydantic)
+- `500` — server error
 
-**Example**:
 ```bash
 curl -X POST http://localhost:8000/api/v1/review \
   -H "Content-Type: application/json" \
+  -H "X-Correlation-ID: $(uuidgen)" \
+  -d '{"design_doc": "## Overview\nA monolithic web app..."}'
+```
+
+---
+
+### Submit Review (File Upload)
+
+**`POST /api/v1/review/upload`**
+
+Submit a design document as a file upload. Returns a streaming NDJSON response.
+
+**Request**: `multipart/form-data`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `file` | file | No* | Document file (`.txt`, `.md`, `.json`, `.pdf`, `.doc`, `.docx`, max 5 MB) |
+| `design_doc` | string | No* | Inline text (combined with file content if both provided) |
+| `output_format` | string | No | `markdown` (default), `plain`, or `json` |
+
+*At least one of `file` or `design_doc` must be provided.
+
+**Request Headers**:
+```
+X-Correlation-ID: <client-generated UUID>   # optional
+```
+
+**Response**: `200 OK` — `application/x-ndjson` stream (same format as JSON endpoint).
+
+**Error responses**:
+- `400` — no input provided, or unsupported file type
+- `413` — file exceeds size limit
+- `422` — extraction or validation error
+
+```bash
+curl -X POST http://localhost:8000/api/v1/review/upload \
+  -H "X-Correlation-ID: $(uuidgen)" \
+  -F "file=@architecture.pdf" \
+  -F "output_format=markdown"
+```
+
+---
+
+### Follow-up Chat
+
+**`POST /api/v1/chat/{correlation_id}`**
+
+Ask a follow-up question about a completed review. Returns a streaming NDJSON response.
+
+**Path Parameters**:
+- `correlation_id` — UUID of the completed review session
+
+**Request Body**:
+```json
+{
+  "correlation_id": "fbae9840-107b-4acb-85f0-139802ceb678",
+  "messages": [
+    { "role": "user", "content": "What are the top security risks?" },
+    { "role": "assistant", "content": "The main risks are..." },
+    { "role": "user", "content": "How should I fix the authentication issue?" }
+  ]
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `correlation_id` | string | Must match the path parameter |
+| `messages` | array | Full conversation history including the current question as the last entry |
+
+**Response**: `200 OK` — `application/x-ndjson` stream of chat chunks.
+
+**Chat stream events**:
+```jsonc
+{"chunk": "Here are the action items..."}   // content chunk
+{"chunk": " to address the issues..."}      // subsequent chunks
+{"status": "complete"}                       // end of stream
+{"status": "error", "message": "..."}       // error
+```
+
+**Error responses**:
+- `404` — review session not found for the given `correlation_id`
+
+```bash
+curl -X POST http://localhost:8000/api/v1/chat/fbae9840-107b-4acb-85f0-139802ceb678 \
+  -H "Content-Type: application/json" \
   -d '{
-    "content": "## System Overview\nA web platform for...",
-    "format": "markdown"
+    "correlation_id": "fbae9840-107b-4acb-85f0-139802ceb678",
+    "messages": [{"role": "user", "content": "What are the main risks?"}]
   }'
 ```
 
 ---
 
-### Get Review by ID
+## Stream Events
 
-Retrieve a previously completed review.
+Both review endpoints stream NDJSON — one JSON object per line, separated by `\n\n`.
 
-**Endpoint**: `GET /api/v1/review/{review_id}`
+### Agent Thinking
 
-**Path Parameters**:
-- `review_id` (required, string): UUID of the review
+Emitted when an agent starts executing.
 
-**Response**:
 ```json
 {
-  "review_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "completed",
-  "analysis": { ... },
-  "summary": "...",
-  "timestamp": "2026-03-01T12:00:00Z"
+  "agent": "Architectural Librarian",
+  "message_type": "thinking",
+  "status": "executing",
+  "message": "**Indexing the architectural blueprint...**"
 }
 ```
 
-**Status Codes**:
-- `200 OK`: Review found
-- `404 Not Found`: Review not found
+### Agent Result
 
-**Example**:
-```bash
-curl http://localhost:8000/api/v1/review/550e8400-e29b-41d4-a716-446655440000
+Emitted when an agent completes its task.
+
+```json
+{
+  "agent": "SRE Performance Architect",
+  "message_type": "result",
+  "status": "executed",
+  "report": {
+    "summary": "## System Readiness\n...",
+    "bottlenecks": [...],
+    "scalability_blockers": [...],
+    "reliability_score": { "score": 62, "justification": "..." }
+  }
+}
+```
+
+### Review Complete
+
+Emitted after all agents finish and the review is saved.
+
+```json
+{
+  "status": "complete",
+  "message": "Design review completed!"
+}
+```
+
+### Error
+
+Emitted if validation fails or an unrecoverable error occurs.
+
+```json
+{
+  "status": "error",
+  "message": "The document is too short to analyze. Please provide more detail.",
+  "feedback": "Please provide a design document to review."
+}
 ```
 
 ---
 
 ## Data Models
 
-### Review Request
+### ReviewRequest
 
 ```typescript
 interface ReviewRequest {
-  content: string;           // Architecture document content
-  format?: string;           // Document format (default: "markdown")
-  options?: {
-    focus_areas?: string[];  // Areas to focus on
-    detail_level?: string;   // Detail level
-  };
+  design_doc?: string;        // Architecture document content
+  correlation_id?: string;    // Set from X-Correlation-ID header; auto-generated if absent
+  output_format?: 'markdown' | 'plain' | 'json';  // default: 'markdown'
 }
 ```
 
-### Review Response
+### ChatRequest
 
 ```typescript
-interface ReviewResponse {
-  review_id: string;         // Unique review identifier
-  status: string;            // Review status
-  analysis: {
-    scalability: AnalysisSection;
-    security: AnalysisSection;
-    reliability: AnalysisSection;
-    performance: AnalysisSection;
-  };
-  summary: string;           // Overall summary
-  overall_score: number;     // Score out of 10
-  timestamp: string;         // ISO 8601 timestamp
-  processing_time_ms: number;
-}
-
-interface AnalysisSection {
-  score: number;             // Score out of 10
-  issues: string[];          // Identified issues
-  recommendations: string[]; // Recommendations
+interface ChatRequest {
+  correlation_id: string;
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 ```
 
-## Error Responses
-
-All error responses follow this format:
+### ErrorResponse
 
 ```json
 {
-  "detail": "Error message describing what went wrong",
-  "error_code": "ERROR_CODE",
-  "timestamp": "2026-03-01T12:00:00Z"
+  "success": false,
+  "status_code": 400,
+  "message": "No input provided. Please supply a file or design_doc.",
+  "error_type": "MissingInputException",
+  "feedback": null
 }
 ```
 
-### Common Error Codes
-
-- `INVALID_REQUEST`: Request body is malformed
-- `VALIDATION_ERROR`: Request validation failed
-- `PROCESSING_ERROR`: Error during review processing
-- `NOT_FOUND`: Requested resource not found
-- `INTERNAL_ERROR`: Internal server error
-
-## Rate Limiting
-
-Currently, there are no rate limits in development. Production deployments should implement appropriate rate limiting.
+---
 
 ## Interactive Documentation
 
-FastAPI provides interactive API documentation:
+FastAPI provides interactive docs at:
 
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-These interfaces allow you to:
-- Explore all available endpoints
-- View request/response schemas
-- Test API calls directly from the browser
-- Download OpenAPI specification
+---
 
 ## Code Examples
 
 ### Python
 
 ```python
+import uuid
 import requests
 
-# Submit a review
+correlation_id = str(uuid.uuid4())
+
 response = requests.post(
     "http://localhost:8000/api/v1/review",
-    json={
-        "content": "## System Overview\nA web platform...",
-        "format": "markdown"
-    }
+    headers={"X-Correlation-ID": correlation_id},
+    json={"design_doc": "## System Overview\nA web platform...", "output_format": "markdown"},
+    stream=True,
 )
 
-review = response.json()
-print(f"Review ID: {review['review_id']}")
-print(f"Overall Score: {review['overall_score']}")
+for line in response.iter_lines():
+    if line:
+        print(line.decode())
 ```
 
-### JavaScript/TypeScript
+### TypeScript
 
 ```typescript
-// Submit a review
+const correlationId = crypto.randomUUID();
+
 const response = await fetch('http://localhost:8000/api/v1/review', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
+    'X-Correlation-ID': correlationId,
   },
   body: JSON.stringify({
-    content: '## System Overview\nA web platform...',
-    format: 'markdown'
-  })
+    design_doc: '## System Overview\nA web platform...',
+    output_format: 'markdown',
+  }),
 });
 
-const review = await response.json();
-console.log(`Review ID: ${review.review_id}`);
-console.log(`Overall Score: ${review.overall_score}`);
+const reader = response.body!.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  console.log(decoder.decode(value));
+}
 ```
 
-### cURL
-
-```bash
-# Submit a review
-curl -X POST http://localhost:8000/api/v1/review \
-  -H "Content-Type: application/json" \
-  -d @architecture.json
-
-# Get review status
-curl http://localhost:8000/api/v1/status
-```
-
-## Webhooks
-
-Webhook support is planned for future releases to notify you when long-running reviews complete.
+---
 
 ## Versioning
 
-The API uses URL versioning (e.g., `/api/v1/`). Breaking changes will result in a new version (e.g., `/api/v2/`).
-
-## Support
-
-For API issues or questions, check the interactive documentation at `/docs` or open an issue on the project repository.
+The API uses URL versioning (`/api/v1/`). Breaking changes will result in a new version prefix.

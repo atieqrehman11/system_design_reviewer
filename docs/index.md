@@ -1,64 +1,39 @@
-# System Design Mentor Documentation
+# System Design Mentor
 
-Welcome to the System Design Mentor documentation. This platform provides AI-powered architecture analysis and recommendations to help you build better systems.
+An AI-powered architecture review platform. Submit a system design document and a multi-agent crew analyzes it for performance, security, and architectural quality — streaming results back in real time. Once the review completes, ask follow-up questions in a chat interface.
 
-## What is System Design Mentor?
+---
 
-System Design Mentor is an intelligent platform that analyzes your system architecture designs and provides comprehensive feedback. Using advanced AI agents powered by CrewAI, it simulates expert system architects reviewing your designs across multiple dimensions:
+## How It Works
 
-- **Scalability**: Can your system handle growth?
-- **Security**: Are there vulnerabilities or compliance issues?
-- **Reliability**: Will your system stay available under stress?
-- **Performance**: Are there bottlenecks or optimization opportunities?
-- **Best Practices**: Does your design follow industry standards?
+1. **Submit** a design document (paste text or upload a file)
+2. **Watch** four specialized AI agents analyze it concurrently and stream their findings
+3. **Review** the structured report covering security, performance, scalability, and reliability
+4. **Ask** follow-up questions about the review in the chat interface
 
-## Key Features
+### The Agent Crew
 
-### AI-Powered Analysis
-Multiple specialized AI agents work together to provide comprehensive reviews of your architecture designs, each focusing on different aspects of system design.
+| Agent | Focus |
+|---|---|
+| Architectural Librarian | Extracts a structured blueprint from the raw document |
+| SRE Performance Architect | Identifies bottlenecks, SPOFs, and scalability blockers |
+| Offensive Security Architect | STRIDE threat modeling, OWASP mapping, trust boundary analysis |
+| Chief Systems Strategist | Synthesizes findings into a prioritized executive roadmap |
 
-### Architecture Decision Records (ADR) Support
-Submit your ADRs in markdown format and receive detailed feedback on your architectural decisions.
-
-### RESTful API
-A well-documented FastAPI backend provides programmatic access to all review capabilities.
-
-### Modern Web Interface
-A React-based frontend makes it easy to submit designs and view analysis results.
-
-### Extensible Architecture
-Built with modularity in mind, making it easy to add new review agents or analysis capabilities.
-
-## Quick Links
-
-- [Getting Started](getting-started.md)
-- [API Reference](api-reference.md)
-- [Configuration Guide](configuration.md)
-
-## Use Cases
-
-### For Developers
-- Get feedback on your system designs before implementation
-- Learn best practices through AI-powered recommendations
-- Identify potential issues early in the design phase
-
-### For Architects
-- Validate architectural decisions
-- Ensure designs meet scalability and reliability requirements
-- Document and review architecture patterns
-
-### For Teams
-- Standardize architecture review processes
-- Share and discuss design decisions
-- Build a knowledge base of architectural patterns
+---
 
 ## Technology Stack
 
-- **Backend**: FastAPI, CrewAI, OpenAI, Python
-- **Frontend**: React, TypeScript, Axios
-- **Infrastructure**: Docker, Docker Compose
-- **Documentation**: MkDocs with Material theme
+- **Backend**: FastAPI, CrewAI, LiteLLM, Python 3.10+
+- **Frontend**: React 18, TypeScript, CSS Modules
+- **AI**: OpenAI GPT-4o / Azure OpenAI (configurable)
+- **Infrastructure**: Docker, Docker Compose, Terraform (Azure Container Instances)
 
-## Next Steps
+---
 
-Ready to get started? Head over to the [Getting Started Guide](getting-started.md) to set up your development environment.
+## Quick Links
+
+- [Getting Started](getting-started.md) — set up and run locally
+- [API Reference](api-reference.md) — endpoints, stream events, code examples
+- [Configuration Guide](configuration.md) — all config options including Azure OpenAI
+- [Design Document](design.md) — architecture, data flow, and key design decisions

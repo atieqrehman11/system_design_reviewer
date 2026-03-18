@@ -1,24 +1,21 @@
+from app.common.logger import logger
 
-def load_prompt(filename: str) -> str:
-    path = f"prompts/{filename}" # Assuming you store them in a 'prompts' folder
-    with open(path, 'r', encoding='utf-8') as f:
-        return f.read()
-    
-def log_task_metrics(output):
+
+def log_task_metrics(output) -> None:
+    """Log task completion metrics. Swallows errors to avoid crashing the crew."""
     try:
-        # Extract only simple data types (strings, ints)
-        agent_role = str(output.agent) 
+        agent_role = str(output.agent)
         task_desc = output.description[:50]
-        
-        print(f"--- TASK COMPLETED ---")
-        print(f"Task: {task_desc}...")
-        print(f"Agent: {agent_role}")
-        print(f"-----------------------")
-    except Exception as e:
-        # If printing fails, don't crash the whole Crew!
-        print(f"Logging error: {e}")
+        logger.info("--- TASK COMPLETED --- Task: %s... Agent: %s", task_desc, agent_role)
+    except Exception as exc:
+        logger.error("Failed to log task metrics: %s", exc)
 
-def audit_logging_callback(output):
+
+def audit_logging_callback(output) -> None:
+    """Audit callback for the final review task."""
     log_task_metrics(output)
     if not output.raw:
-        print("Architect skipped: No audit data received.")
+        logger.warning("Architect skipped: No audit data received.")
+
+
+__all__ = ["log_task_metrics", "audit_logging_callback"]

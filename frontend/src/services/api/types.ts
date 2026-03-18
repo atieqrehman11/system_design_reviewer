@@ -16,6 +16,7 @@ export interface RequestOptions {
   signal?: AbortSignal;
   timeout?: number;
   outputFormat?: OutputFormat;
+  correlationId?: string;
 }
 
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {

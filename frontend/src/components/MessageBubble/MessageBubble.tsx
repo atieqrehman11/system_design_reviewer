@@ -112,7 +112,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatestResult =
                 </div>
               )}
               {message.type !== MessageType.AGENT_THINKING && !hasReport && (
-                <div className={styles.messageContent}>{message.content}</div>
+                <div className={styles.messageContent}>
+                  <div className={styles.markdownContent}>
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
+                </div>
               )}
               {message.report && (
                 <ReportContent report={message.report as Record<string, unknown>} />

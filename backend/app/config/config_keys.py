@@ -37,7 +37,15 @@ AZURE_ENDPOINT="azure_endpoint"
 AZURE_API_KEY="azure_api_key"
 AZURE_DEPLOYMENT_NAME="azure_deployment_name"
 
+# Azure LLM generation params
+AZURE_LLM_TEMPERATURE = "azure_llm_temperature"
+AZURE_LLM_TOP_P = "azure_llm_top_p"
+AZURE_LLM_MAX_COMPLETION_TOKENS = "azure_llm_max_completion_tokens"
+
 # Chat LLM configuration
 CHAT_MODEL = "chat_model"
 CHAT_TEMPERATURE = "chat_temperature"
 CHAT_MAX_TOKENS = "chat_max_tokens"
+
+# Storage
+DB_PATH = "db_path"

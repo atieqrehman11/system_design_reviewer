@@ -11,7 +11,16 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
-_DB_PATH = Path(__file__).parent.parent / "review_sessions.db"
+from app.config.config import settings
+
+def _resolve_db_path() -> Path:
+    """Resolve DB path from settings, falling back to the app data directory."""
+    configured = settings.get("db_path")
+    if configured:
+        return Path(configured)
+    return Path(__file__).parent.parent / "review_sessions.db"
+
+_DB_PATH = _resolve_db_path()
 _lock = threading.Lock()
 
 

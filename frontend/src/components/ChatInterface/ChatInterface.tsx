@@ -3,16 +3,11 @@ import { UI_TEXT } from '../../config/constants';
 import { useChatInterface } from './useChatInterface';
 import MessageList from '../MessageList';
 import InputArea from '../InputArea';
-import type { FileAttachment } from '../FileUploader';
 import styles from './ChatInterface.module.css';
 
 const ChatInterface: React.FC = () => {
   const { messages, isStreaming, isFollowUpMode, error, handleSubmit, resetSession } =
     useChatInterface();
-
-  const onSubmit = (content: string, attachment?: FileAttachment) => {
-    handleSubmit(content, attachment);
-  };
 
   return (
     <div className={styles.chatContainer}>
@@ -22,7 +17,7 @@ const ChatInterface: React.FC = () => {
           {isStreaming && (
             <div className={styles.streamingBadge}>
               <span className={styles.streamingPulse} />
-              <span>{isFollowUpMode ? 'Thinking...' : 'Processing...'}</span>
+              <span>{isFollowUpMode ? UI_TEXT.streamingThinking : UI_TEXT.streamingProcessing}</span>
             </div>
           )}
         </div>
@@ -47,7 +42,7 @@ const ChatInterface: React.FC = () => {
       </div>
 
       <InputArea
-        onSubmit={onSubmit}
+        onSubmit={handleSubmit}
         disabled={isStreaming}
         placeholder={isFollowUpMode ? UI_TEXT.chatPlaceholder : UI_TEXT.inputPlaceholder}
         showFileUpload={!isFollowUpMode}

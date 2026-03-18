@@ -50,7 +50,7 @@ export async function submitReviewWithRetry(
   retryConfig: Partial<RetryConfig> = {}
 ): Promise<ReviewStreamResult> {
   const config = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
-  let lastError: Error;
+  let lastError: Error = new Error(ERROR_MESSAGES.genericError);
 
   for (let attempt = 1; attempt <= config.maxAttempts; attempt++) {
     try {
@@ -67,10 +67,10 @@ export async function submitReviewWithRetry(
       }
 
       const delay = calculateRetryDelay(attempt, config);
-      await new Promise((resolve) => setTimeout(resolve, delay));
       logRetryAttempt(attempt, delay);
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
-  throw new Error('Retry failed');
+  throw lastError;
 }

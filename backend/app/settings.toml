@@ -29,3 +29,8 @@ max_file_size_mb = 5
 model = "openai/gpt-4o"
 temperature = 0.3
 max_tokens = 1024
+
+[azure_llm]
+temperature = 1.0
+top_p = 1.0
+max_completion_tokens = 4096

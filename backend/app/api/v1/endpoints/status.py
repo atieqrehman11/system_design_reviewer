@@ -22,16 +22,10 @@ async def root():
 async def health_check():
     """Health check for monitoring"""
     return {
-        "status": "healthy", 
+        "status": "healthy",
         "service": settings.get(APP_NAME),
         "version": settings.get(APP_VERSION)
     }
-
-@router.get("/properties")
-async def get_properties():
-    """Return all configuration settings as a JSON object"""
-    print("Returning all configuration settings\n")
-    return settings.get_all()
 
 @router.get("/model-config/{model_name}")
 async def get_model_config(model_name: str):

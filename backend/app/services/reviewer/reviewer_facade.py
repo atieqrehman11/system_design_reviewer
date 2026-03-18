@@ -1,89 +1,75 @@
 import asyncio
 import json
-from queue import Queue, Empty
+from queue import Empty, Queue
 from typing import AsyncGenerator
 
 from pydantic import BaseModel
 
-from app.services.reviewer.reviewer_service import ReviewerService
 from app.common.event_dispatcher import EventDispatcher
-
+from app.common.logger import logger
 from app.models.api_schema import ReviewRequest
+from app.services.reviewer.reviewer_service import ReviewerService
+
 
 class ReviewerFacade:
-    def __init__(self, reviewer_service: ReviewerService, event_dispatcher: EventDispatcher = None):
+    def __init__(self, reviewer_service: ReviewerService, event_dispatcher: EventDispatcher) -> None:
         self.reviewer_service = reviewer_service
         self.event_dispatcher = event_dispatcher
 
     async def start_review(self, request: ReviewRequest) -> AsyncGenerator[str, None]:
-        """
-        1. Creates a local queue
-        2. Starts the service immediately
-        3. Returns the async generator
-        """
-        sync_queue = Queue() # Standard threaded Queue
-        
+        """Register the session, kick off the crew job, and stream results."""
+        sync_queue: Queue = Queue()
         self.event_dispatcher.register_session(request.correlation_id, sync_queue)
-
-        try:    
-            # Start the execution IMMEDIATELY
+        try:
             self.reviewer_service.run_crew_job(request, sync_queue)
-            
-            # Return the generator that will poll the sync_queue
-            async for chunk in self._async_generator_wrapper(sync_queue):
-               yield chunk
-        
+            async for chunk in self._stream_queue(sync_queue):
+                yield chunk
         finally:
-            print(f"Unregistering session: {request.correlation_id}")
+            logger.info("[ReviewerFacade] Unregistering session: %s", request.correlation_id)
             self.event_dispatcher.unregister_session(request.correlation_id)
 
-    async def _async_generator_wrapper(self, sync_queue: Queue):
-        """Polls the threaded queue and yields to the async stream."""
+    async def _stream_queue(self, sync_queue: Queue) -> AsyncGenerator[str, None]:
+        """Poll the threaded queue and yield serialised events to the async stream."""
+        loop = asyncio.get_running_loop()
         while True:
             try:
-                # 1. Fetch from the threaded queue without blocking the event loop
-                # We use a very short timeout here
-                event = await asyncio.get_event_loop().run_in_executor(
+                event = await loop.run_in_executor(
                     None, lambda: sync_queue.get(timeout=0.2)
                 )
-                
-                # 2. Check for the "Poison Pill" (None) to shut down
+
                 if event is None:
-                    print("Received shutdown signal (None) in queue. Closing stream.")
-                    break 
-
-                # 3. Serialize based on type (Fixes your AttributeError)
-                if isinstance(event, BaseModel):
-                    payload = event.model_dump_json(exclude_none=True)
-                elif isinstance(event, dict):
-                    payload = json.dumps(event)
-                else:
-                    payload = json.dumps({"data": str(event)})
-
-                # 4. YIELD AND FLUSH
-                # Adding an extra newline (\n\n) helps some clients recognize the chunk
-                yield f"{payload}\n\n"
-                
-                # 5. Check for completion to close the stream
-                # We check both the Pydantic attribute and Dict key
-                status = getattr(event, 'status', None) if not isinstance(event, dict) else event.get('status')
-                
-                # Note: CrewAI sometimes uses "completed" instead of "complete"
-                if status in ["complete", "completed", "error"]:
+                    logger.info("[ReviewerFacade] Received shutdown signal. Closing stream.")
                     break
-                    
+
+                payload = self._serialize_event(event)
+                yield f"{payload}\n\n"
+
+                status = (
+                    event.get("status") if isinstance(event, dict)
+                    else getattr(event, "status", None)
+                )
+                if status in ("complete", "completed", "error"):
+                    break
+
             except Empty:
-                # print("Queue is empty, yielding control to event loop...")
-                await asyncio.sleep(0.1)  # Sleep briefly to avoid busy waiting
-                continue 
+                await asyncio.sleep(0.1)
+                continue
             except asyncio.CancelledError:
-                # If the user disconnects or server stops
-                print("Stream cancelled by client or server.")
-                break
-            except Exception as e:
-                # Log the error and send it to the client so you know why it failed
-                print(f"Streaming Error: {e}")
-                yield json.dumps({"status": "error", "message": str(e)}) + "\n"
+                logger.info("[ReviewerFacade] Stream cancelled by client.")
+                raise
+            except Exception as exc:
+                logger.error("[ReviewerFacade] Streaming error: %s", exc)
+                yield json.dumps({"status": "error", "message": str(exc)}) + "\n"
                 break
 
-__all__ = ['ReviewerFacade']
+    @staticmethod
+    def _serialize_event(event: object) -> str:
+        """Serialise a queue event to a JSON string."""
+        if isinstance(event, BaseModel):
+            return event.model_dump_json(exclude_none=True)
+        if isinstance(event, dict):
+            return json.dumps(event)
+        return json.dumps({"data": str(event)})
+
+
+__all__ = ["ReviewerFacade"]

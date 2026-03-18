@@ -9,10 +9,14 @@ export interface FileAttachment {
 }
 
 /**
- * Validate file type
+ * Validate file type by extracting the extension robustly.
+ * Handles files with no extension and dotfiles (e.g. .gitignore).
  */
 function isValidFileType(filename: string): boolean {
-  const extension = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+  const lastDot = filename.lastIndexOf('.');
+  // No dot, or dot is the first character (dotfile with no real extension)
+  if (lastDot <= 0) return false;
+  const extension = filename.slice(lastDot).toLowerCase();
   return FILE_UPLOAD_CONFIG.acceptedFileTypes.includes(extension);
 }
 

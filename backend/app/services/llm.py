@@ -4,7 +4,8 @@ from crewai import LLM
 from app.config.config_keys import (
     USE_AZURE_OPENAI, AZURE_API_VERSION,
     AZURE_ENDPOINT, AZURE_API_KEY,
-    AZURE_DEPLOYMENT_NAME
+    AZURE_DEPLOYMENT_NAME,
+    AZURE_LLM_TEMPERATURE, AZURE_LLM_TOP_P, AZURE_LLM_MAX_COMPLETION_TOKENS,
 )
 from app.config.config import settings
 
@@ -46,18 +47,17 @@ class LLMService():
         )
     
     def _azure_llm(self) -> LLM:
-        """Helper to build an Azure LLM from YAML config"""
-        
+        """Helper to build an Azure LLM from config."""
         return LLM(
-            model='azure/'+settings.get(AZURE_DEPLOYMENT_NAME),
+            model='azure/' + settings.get(AZURE_DEPLOYMENT_NAME),
             api_version=settings.get(AZURE_API_VERSION),
             base_url=settings.get(AZURE_ENDPOINT),
             api_key=settings.get(AZURE_API_KEY),
             drop_params=True,
-            additional_drop_params=["stop", "max_tokens"], 
-            max_completion_tokens=4096,
-            temperature=1.0,
-            top_p=1.0
+            additional_drop_params=["stop", "max_tokens"],
+            max_completion_tokens=settings.get_int(AZURE_LLM_MAX_COMPLETION_TOKENS, 4096),
+            temperature=settings.get(AZURE_LLM_TEMPERATURE, 1.0),
+            top_p=settings.get(AZURE_LLM_TOP_P, 1.0),
         )
     
 __all__ = ["LLMService"]

@@ -61,6 +61,7 @@ export async function parseNDJSONStream(
     }
   } catch (error) {
     onError(error instanceof Error ? error : new Error(ERROR_MESSAGES.genericError));
+    onComplete();
   } finally {
     reader.releaseLock();
   }

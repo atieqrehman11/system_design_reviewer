@@ -1,4 +1,11 @@
 // API Configuration
+if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_BASE_URL) {
+  console.warn(
+    '[config] REACT_APP_API_BASE_URL is not set. Falling back to /api/v1. ' +
+    'This may not work correctly in production.',
+  );
+}
+
 export const API_CONFIG = {
   baseUrl: process.env.REACT_APP_API_BASE_URL || '/api/v1',
   reviewEndpoint: '/review',
@@ -14,12 +21,16 @@ export const UI_TEXT = {
   submitButtonText: 'Review Design',
   fileUploadText: 'Upload File',
   emptyStateMessage: 'Submit a design document to get started with your architectural review',
+  streamingThinking: 'Thinking...',
+  streamingProcessing: 'Processing...',
 };
 
 // File Upload Configuration
+const MAX_FILE_SIZE_MB = 5;
+
 export const FILE_UPLOAD_CONFIG = {
-  maxFileSizeMB: 5,
-  maxFileSizeBytes: 5 * 1024 * 1024, // 5MB in bytes
+  maxFileSizeMB: MAX_FILE_SIZE_MB,
+  maxFileSizeBytes: MAX_FILE_SIZE_MB * 1024 * 1024,
   acceptedFileTypes: ['.txt', '.md', '.json', '.pdf', '.doc', '.docx'],
   acceptedMimeTypes: [
     'text/plain',

@@ -83,10 +83,35 @@ components/
 - Write tests for transformer/utility logic; focus on behavior not implementation
 - Update existing tests when changing behavior — don't leave stale assertions
 
+## Hooks & Async Patterns
+- Never use IIFEs (`(async () => { ... })()`) inside `useCallback` — define a named `async function run()` and call `run().catch(...)` so errors are always surfaced
+- `useCallback` with an empty dep array `[]` is safe when all referenced values are stable state setters or refs — document this with a comment to prevent future "fixes" that add unnecessary deps
+- When a hook grows beyond one responsibility (state, streaming, error handling), split it: one sub-hook per concern, composed by a thin parent hook
+- Pure stream utilities (no React deps) belong in a dedicated `*Utils.ts` file — fully testable in isolation
+- Extract inner callback factories (e.g. `makeXCallbacks`) to module level to avoid nesting functions more than 4 levels deep (SonarQube rule)
+
+## TypeScript & IDs
+- Use `crypto.randomUUID()` for generating unique IDs — never `Date.now() + Math.random()` which can collide under concurrency
+- Derive computed constants from their source: `maxFileSizeBytes` should be `maxFileSizeMB * 1024 * 1024`, not a separate hardcoded value
+- Name stream chunk response types explicitly (e.g. `ChatChunkResponse`) and import them — don't re-declare inline shapes
+
+## Error Handling (Streams)
+- `onComplete` / `onError` callbacks must always be called — including in exception paths; use `finally` blocks to guarantee this
+- Stream error paths must always call `onComplete` so callers don't hang in a pending state
+- Inline message errors (bubble-level) and banner errors serve different purposes — don't show both for the same failure
+
+## Python Backend
+- Use `%s`-style logger formatting (`logger.info("msg %s", value)`) — never f-strings in log calls (SonarQube / performance)
+- `asyncio.CancelledError` must always be re-raised — never swallowed in a bare `except Exception` block
+- Raise domain-specific exceptions (e.g. `ReviewNotFoundException`) from services; let a central exception handler map them to HTTP responses — don't raise `HTTPException` directly in service or business logic layers
+- Singleton classes must guard `__init__` with an `if hasattr(self, '_initialized')` check to prevent re-initialisation on repeated `getInstance()` calls
+- Use `frozenset` for immutable keyword/constant sets — signals intent and prevents accidental mutation
+- Shared string/numeric constants belong in `constants.py` — never duplicated across modules
+
 ## Rules
 - Always follow best practice of language the code is written in
 - Ensure the functions/lib is not deprecated
 - Ensure the code generated must not have any sonarqube issues and code smells
-- Ensure the code generated must adhare to standards. created in its best place to avoid any technical debt
-- Ensure the best place for any method if it can be part of a class then it must be added to the class. 
-- Always ensure Single Responsitiblity rule for method/class level and keep the methods testable
+- Ensure the code generated must adhere to standards, created in its best place to avoid any technical debt
+- Ensure the best place for any method — if it can be part of a class then it must be added to the class
+- Always ensure Single Responsibility rule for method/class level and keep the methods testable

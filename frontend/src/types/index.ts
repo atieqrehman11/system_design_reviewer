@@ -28,7 +28,28 @@ export interface ReviewResponse {
   report?: ReviewReport;
 }
 
+// ReviewReport — mirrors backend ReviewReport / sub-schemas (final_report_schema.py)
+export interface ReviewScorecard {
+  architecture_health: string;
+  primary_risks: string;
+  primary_bottleneck: string;
+}
+
+export interface ReviewFinding {
+  priority: 'High' | 'Medium' | 'Low';
+  category: string;
+  finding: string;
+  impact: string;
+  fix: string;
+}
+
 export interface ReviewReport {
+  data_available: boolean;
+  generated_at: string;
+  scorecard?: ReviewScorecard;
+  findings?: ReviewFinding[];
+  deep_dive?: string;
+  // Sub-agent reports are merged into the final report — allow extra keys
   [key: string]: unknown;
 }
 

@@ -57,8 +57,6 @@ class DocumentExtractor:
 
         try:
             return self._extract_content(content, extension)
-        except ExtractionError:
-            raise
         except Exception as exc:
             raise ExtractionError(
                 "Could not extract text from file. The file may be corrupted or password-protected.",

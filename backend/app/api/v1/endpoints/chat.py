@@ -1,35 +1,18 @@
 """
 Chat API endpoint — follow-up conversation over a completed review session.
 """
-from typing import List, Literal
-
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
 from app.common.exception_handlers import ReviewSessionNotFoundException
+from app.models.api_schema import ChatMessageRequest, ChatRequest
 from app.services.chat_service import ChatService
 from app.services.review_store import get_review
+from app.common.constants import STREAM_HEADERS
 
 router = APIRouter()
 
 _chat_service = ChatService()
-
-_STREAM_HEADERS = {
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-    "X-Accel-Buffering": "no",
-}
-
-
-class ChatMessageRequest(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str
-
-
-class ChatRequest(BaseModel):
-    correlation_id: str
-    messages: List[ChatMessageRequest]
 
 
 @router.post("")
@@ -54,5 +37,5 @@ async def chat_followup(request: ChatRequest) -> StreamingResponse:
             messages=messages,
         ),
         media_type="application/x-ndjson",
-        headers=_STREAM_HEADERS,
+        headers=STREAM_HEADERS,
     )

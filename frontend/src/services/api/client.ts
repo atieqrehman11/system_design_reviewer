@@ -32,17 +32,20 @@ async function executeRequest(
   init: RequestInit,
   options: RequestOptions,
 ): Promise<ReviewStreamResult> {
-  const { signal: userSignal, timeout = DEFAULT_TIMEOUT_MS } = options;
+  const { signal: userSignal, timeout = DEFAULT_TIMEOUT_MS, correlationId = '' } = options;
   const { signal, cleanup } = createTimeoutSignal(userSignal, timeout);
 
+  const headers = new Headers(init.headers);
+  if (correlationId) {
+    headers.set('X-Correlation-ID', correlationId);
+  }
+
   try {
-    const response = await fetch(url, { ...init, signal });
+    const response = await fetch(url, { ...init, headers, signal });
     cleanup();
 
     if (!response.ok) await handleResponseError(response);
     if (!response.body) throw new ApiError('No response body received from server');
-
-    const correlationId = response.headers.get('X-Task-ID') ?? '';
 
     return { stream: response.body, correlationId };
   } catch (error) {
@@ -96,3 +99,4 @@ export async function submitReviewWithFile(
     options,
   );
 }
+
