@@ -311,7 +311,7 @@ All non-report text content (including follow-up chat replies) is rendered throu
 CrewAI's `crew.kickoff()` is synchronous and blocking. Running it in a daemon thread with a `Queue` as the event bus allows FastAPI's async event loop to remain unblocked while still streaming results incrementally.
 
 **Client-generated correlation ID via header**
-The client generates the `correlation_id` UUID and sends it as `X-Correlation-ID`. The backend reads it (with UUID fallback). This eliminates the previous `X-Task-ID` response header and the client-side patching logic that was needed to reconcile mismatched IDs.
+The client generates the `correlation_id` UUID and sends it as `X-Correlation-ID`. The backend reads it (with UUID fallback).
 
 **Hook decomposition: one concern per hook**
 `useChatInterface` is a thin composing hook. `useReviewStream` owns review streaming; `useChatStream` owns chat streaming; `chatStreamUtils.ts` contains pure stream utilities with no React dependencies. This keeps each unit testable in isolation and avoids nesting beyond 4 levels (SonarQube rule).
@@ -323,7 +323,7 @@ Rather than appending a new message for each agent result, the frontend replaces
 Both agent thinking/result messages and follow-up chat replies are rendered through `ReactMarkdown`. This ensures bold, lists, headings, and code blocks display correctly regardless of which path produced the content.
 
 **Single agent config version**
-Agent YAML config is versioned under `config/review/v1/`. The `reviewer_config_version` setting and v2 config have been removed; the crew class hardcodes the v1 paths. Switching agent behaviour requires editing the YAML files directly.
+Agent YAML config is versioned under `config/review/v1/`.
 
 **Output format negotiation**
 The `output_format` field (`markdown` | `plain` | `json`) is passed through the entire pipeline. Each agent's task prompt includes a FORMAT DIRECTIVE controlling how narrative fields (`summary`, `deep_dive`) are rendered, while structured fields (scores, findings lists) are always plain data.
