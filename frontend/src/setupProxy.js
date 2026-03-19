@@ -1,6 +1,6 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-module.exports = function (app) {
+module.exports = function setupProxy(app) {
   // Only proxy API requests, not static assets
   app.use(
     '/api',

@@ -1,0 +1,271 @@
+.messageBubble {
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: 0.25rem 0;
+  word-wrap: break-word;
+  animation: fadeIn 0.2s ease-out;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* User message — pill bubble, right-aligned */
+.user {
+  display: flex;
+  justify-content: flex-end;
+  background: transparent;
+  padding: 0;
+}
+
+.user .messageContent {
+  background-color: var(--color-surface-container);
+  color: var(--color-on-surface);
+  max-width: 70%;
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-md);
+  line-height: 1.6;
+}
+
+/* Agent messages — no bubble, full width, left-aligned */
+.agentThinking {
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  max-width: 100%;
+  padding: var(--spacing-xs) 0;
+}
+
+.agentResult {
+  background: transparent;
+  color: var(--color-on-surface);
+  max-width: 100%;
+  padding: var(--spacing-xs) 0;
+}
+
+.systemComplete {
+  background: transparent;
+  color: var(--color-success);
+  max-width: 100%;
+  padding: var(--spacing-xs) 0;
+  font-weight: 500;
+}
+
+.systemCompleteRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-weight: 500;
+}
+
+.error {
+  background-color: #fce8e6;
+  color: var(--color-danger);
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-danger);
+}
+
+/* --- Header row (agent name + timestamp) --- */
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: 0.3rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  cursor: default;
+}
+
+button.messageHeader {
+  cursor: pointer;
+}
+
+button.messageHeader:hover .agentName {
+  color: var(--color-primary);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
+.messageIcon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.agentName {
+  font-weight: 500;
+  font-size: var(--font-sm);
+  color: var(--color-on-surface);
+  transition: color var(--transition-fast);
+}
+
+.collapseIndicator {
+  font-size: 0.6rem;
+  color: var(--text-light);
+}
+
+.timestamp {
+  font-size: var(--font-xs);
+  color: var(--text-light);
+  margin-left: auto;
+}
+
+/* --- Copy button (visibility override for bubble context) --- */
+
+.bubbleCopyButton {
+  opacity: 0;
+}
+
+.messageBubble:hover .bubbleCopyButton {
+  opacity: 0.35;
+}
+
+.messageBubble:hover .bubbleCopyButton:hover {
+  opacity: 1;
+}
+
+.userCopyWrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.15rem;
+}
+
+/* --- Message body --- */
+
+.messageContent {
+  line-height: 1.7;
+  white-space: pre-wrap;
+  font-size: var(--font-md);
+  color: var(--color-on-surface);
+}
+
+/* --- Thinking dots --- */
+
+.thinkingIndicator {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.thinkingDot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--color-outline);
+  border-radius: 50%;
+  animation: blink 1.4s infinite;
+}
+
+.thinkingDot:nth-child(2) { animation-delay: 0.2s; }
+.thinkingDot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes blink {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%       { opacity: 1;   transform: scale(1); }
+}
+
+/* --- Markdown rendered content --- */
+
+.markdownContent {
+  line-height: 1.7;
+  font-size: var(--font-sm);
+  color: var(--color-on-surface);
+  white-space: normal;
+}
+
+.markdownContent h1,
+.markdownContent h2,
+.markdownContent h3 {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--color-on-surface);
+  margin: var(--spacing-sm) 0 var(--spacing-xs);
+  line-height: 1.4;
+}
+
+.markdownContent h1 { font-size: var(--font-lg); }
+.markdownContent h2 { font-size: var(--font-md); }
+.markdownContent h3 { font-size: var(--font-sm); }
+
+.markdownContent p {
+  margin: 0 0 var(--spacing-sm);
+}
+
+.markdownContent p:last-child {
+  margin-bottom: 0;
+}
+
+.markdownContent ul,
+.markdownContent ol {
+  margin: var(--spacing-xs) 0 var(--spacing-sm);
+  padding-left: var(--spacing-lg);
+}
+
+.markdownContent li {
+  margin-bottom: 0.25rem;
+  line-height: 1.6;
+}
+
+.markdownContent strong {
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.markdownContent em {
+  font-style: italic;
+  color: var(--color-on-surface-variant);
+}
+
+.markdownContent code {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: var(--font-xs);
+  background-color: var(--color-surface-variant);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.35rem;
+}
+
+.markdownContent pre {
+  margin: var(--spacing-xs) 0 var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background-color: var(--color-surface-variant);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-size: var(--font-xs);
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.markdownContent pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.markdownContent blockquote {
+  margin: var(--spacing-xs) 0;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-left: 3px solid var(--color-outline);
+  color: var(--color-on-surface-variant);
+  font-style: italic;
+}

@@ -25,7 +25,7 @@ An AI-powered architecture review platform. Submit a system design document and 
 ## Tech Stack
 
 - **Backend**: FastAPI, CrewAI, LiteLLM, Python 3.10+
-- **Frontend**: React 18, TypeScript, CSS Modules
+- **Frontend**: React 18, TypeScript — see https://github.com/atieqrehman11/chat-ui
 - **AI**: OpenAI GPT-4o / Azure OpenAI (configurable)
 - **Infrastructure**: Docker, Docker Compose, Terraform (Azure Container Instances)
 
@@ -37,12 +37,10 @@ An AI-powered architecture review platform. Submit a system design document and 
 git clone <repository-url>
 cd system-design-mentor
 chmod +x dev.sh
-./dev.sh full
+./dev.sh
 ```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- Swagger UI: http://localhost:8000/docs
+Backend starts on http://localhost:8000. Swagger UI at http://localhost:8000/docs.
 
 Requires an OpenAI API key in a `.env` file at the project root:
 
@@ -72,18 +70,12 @@ For Azure OpenAI, see the [Configuration Guide](docs/configuration.md).
 │   │   └── settings.toml
 │   ├── main.py
 │   └── requirements.txt
-├── frontend/
-│   └── src/
-│       ├── components/
-│       │   ├── ChatInterface/  # useChatInterface, useReviewStream, useChatStream
-│       │   ├── MessageBubble/
-│       │   ├── MessageList/
-│       │   └── InputArea/
-│       └── services/api/       # client, retry, stream, transformer
-├── docs/                       # Full documentation
+├── docs/                       # Backend documentation
 ├── docker-compose.dev.yml
 └── dev.sh
 ```
+
+Frontend lives in its own repo: https://github.com/atieqrehman11/chat-ui
 
 ---
 
@@ -91,9 +83,9 @@ For Azure OpenAI, see the [Configuration Guide](docs/configuration.md).
 
 | Document | Description |
 |---|---|
-| [Getting Started](docs/getting-started.md) | Setup, installation, and first review |
+| [Getting Started](docs/getting-started.md) | Setup, installation, and running the backend |
 | [API Reference](docs/api-reference.md) | Endpoints, stream events, code examples |
-| [Configuration Guide](docs/configuration.md) | All config options including Azure OpenAI |
+| [Configuration Guide](docs/configuration.md) | All backend config options including Azure OpenAI |
 | [Design Document](docs/design.md) | Architecture, data flow, and key design decisions |
 
 ---
@@ -101,11 +93,6 @@ For Azure OpenAI, see the [Configuration Guide](docs/configuration.md).
 ## Testing
 
 ```bash
-# Backend
 cd backend && source venv/bin/activate
 pytest
-
-# Frontend
-cd frontend
-npm test -- --watchAll=false
 ```
