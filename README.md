@@ -20,6 +20,36 @@ An AI-powered architecture review platform. Submit a system design document and 
 | Offensive Security Architect | STRIDE threat modeling, OWASP mapping, trust boundary analysis |
 | Chief Systems Strategist | Synthesizes findings into a prioritized executive roadmap |
 
+Agents run sequentially — the librarian extracts a `DocBlueprint` first, then the performance and security architects run concurrently, and the chief strategist synthesizes everything into a final `ReviewReport`.
+
+---
+
+## Architecture Overview
+
+```
+Client (React)
+    │  POST /api/v1/review  (NDJSON stream)
+    ▼
+FastAPI endpoint
+    ├── DocumentExtractor   (file → plain text)
+    └── ReviewerFacade
+            ├── EventDispatcher  (correlation_id → Queue)
+            ├── ReviewerService  → run_crew_in_thread()
+            │       └── DesignReviewerCrew (CrewAI)
+            │               ├── librarian
+            │               ├── performance_architect  ─┐ concurrent
+            │               ├── security_architect     ─┘
+            │               └── chief_strategist
+            └── ReviewerEventListener  (CrewAI events → Queue)
+                    stream_queue() → NDJSON chunks → client
+```
+
+CrewAI's synchronous `kickoff()` runs in a daemon thread. A thread-safe `Queue` bridges it to FastAPI's async event loop — keeping the server non-blocking while streaming results incrementally. The `ReviewerEventListener` subscribes to CrewAI's event bus and dispatches typed `ReviewResponse` events (thinking, result, complete) into the correct session queue.
+
+After a review completes, follow-up questions are handled by `ChatService` — a direct LiteLLM call (no crew) scoped to the stored design doc and report.
+
+See [Design Document](docs/design.md) for the full architecture and data flow.
+
 ---
 
 ## Tech Stack
@@ -36,8 +66,8 @@ An AI-powered architecture review platform. Submit a system design document and 
 ```bash
 git clone <repository-url>
 cd system-design-mentor
-chmod +x dev.sh
-./dev.sh
+chmod +x manage.sh
+./manage.sh
 ```
 
 Backend starts on http://localhost:8000. Swagger UI at http://localhost:8000/docs.
@@ -56,23 +86,25 @@ For Azure OpenAI, see the [Configuration Guide](docs/configuration.md).
 
 ```
 .
-├── backend/
-│   ├── app/
-│   │   ├── api/v1/endpoints/   # review.py, chat.py, status.py
-│   │   ├── common/             # logger, constants, exception handlers
-│   │   ├── config/             # Settings, config_keys, review YAML (v1)
-│   │   ├── models/             # Pydantic schemas
-│   │   ├── services/
-│   │   │   ├── reviewer/       # ReviewerFacade, Crew, EventListener
-│   │   │   ├── chat_service.py
-│   │   │   ├── llm.py
-│   │   │   └── review_store.py
-│   │   └── settings.toml
-│   ├── main.py
-│   └── requirements.txt
-├── docs/                       # Backend documentation
+├── app/
+│   ├── api/v1/endpoints/   # review.py, chat.py, status.py
+│   ├── common/             # logger, constants, exception handlers,
+│   │                       # streaming.py, crew_runner.py (reusable infra)
+│   ├── config/             # Settings, config_keys, review YAML (v1)
+│   ├── models/             # Pydantic schemas
+│   ├── services/
+│   │   ├── reviewer/       # ReviewerFacade, Crew, EventListener, Service
+│   │   ├── chat_service.py
+│   │   ├── llm.py
+│   │   └── review_store.py
+│   └── settings.toml
+├── deploy/container/       # Terraform (Azure Container Instances)
+├── docs/                   # Documentation
+├── main.py
+├── requirements.txt
+├── Dockerfile
 ├── docker-compose.dev.yml
-└── dev.sh
+└── manage.sh
 ```
 
 Frontend lives in its own repo: https://github.com/atieqrehman11/chat-ui
@@ -84,15 +116,33 @@ Frontend lives in its own repo: https://github.com/atieqrehman11/chat-ui
 | Document | Description |
 |---|---|
 | [Getting Started](docs/getting-started.md) | Setup, installation, and running the backend |
-| [API Reference](docs/api-reference.md) | Endpoints, stream events, code examples |
-| [Configuration Guide](docs/configuration.md) | All backend config options including Azure OpenAI |
-| [Design Document](docs/design.md) | Architecture, data flow, and key design decisions |
+| [API Reference](docs/api-reference.md) | Endpoints, stream events, request/response shapes, code examples |
+| [Configuration Guide](docs/configuration.md) | All config options — `settings.toml`, env vars, Azure OpenAI |
+| [Design Document](docs/design.md) | Architecture, streaming pipeline, DI wiring, data flow, key decisions |
+
+Docs can also be served locally with MkDocs:
+
+```bash
+./manage.sh docs        # serve on http://localhost:8001
+./manage.sh docs:build  # build static site
+```
+
+---
+
+## Development Commands
+
+```bash
+./manage.sh             # start API on :8000
+./manage.sh test        # run tests
+./manage.sh docs        # serve docs on :8001
+./manage.sh docs:build  # build static docs site
+```
 
 ---
 
 ## Testing
 
 ```bash
-cd backend && source venv/bin/activate
+source venv/bin/activate
 pytest
 ```

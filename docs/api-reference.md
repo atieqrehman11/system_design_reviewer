@@ -165,7 +165,7 @@ curl -X POST http://localhost:8000/api/v1/chat/fbae9840-107b-4acb-85f0-139802ceb
 
 ## Stream Events
 
-Both review endpoints stream NDJSON — one JSON object per line, separated by `\n\n`.
+Both review endpoints stream NDJSON — one JSON object per line (`\n\n` between events).
 
 ### Agent Thinking
 

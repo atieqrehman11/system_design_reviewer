@@ -28,17 +28,17 @@ class EventDispatcher:
         self._initialized = True
 
     def register_session(self, session_id: str, queue: Queue) -> None:
-        logger.info("[EventDispatcher] Registering session: %s", session_id)
+        logger.debug("[EventDispatcher] Registering session: %s", session_id)
         self._active_queues[session_id] = queue
 
     def unregister_session(self, session_id: str) -> None:
-        logger.info("[EventDispatcher] Unregistering session: %s", session_id)
+        logger.debug("[EventDispatcher] Unregistering session: %s", session_id)
         self._active_queues.pop(session_id, None)
 
     def dispatch(self, session_id: str, data: Any) -> None:
         queue = self._active_queues.get(session_id)
         if queue:
-            logger.info("[EventDispatcher] Dispatching event to session: %s", session_id)
+            logger.debug("[EventDispatcher] Dispatching event to session: %s", session_id)
             queue.put(data)
         else:
             logger.warning("[EventDispatcher] No active queue for session: %s", session_id)

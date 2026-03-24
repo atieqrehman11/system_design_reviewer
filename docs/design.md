@@ -2,63 +2,44 @@
 
 ## Overview
 
-System Design Mentor is a full-stack AI-powered architecture review platform. Users submit system design documents (as text or file uploads), and a multi-agent AI crew analyzes them for performance, security, and architectural quality. Results are streamed back to the UI in real time. After a review completes, users can ask follow-up questions in a chat interface backed by a direct LLM call.
+System Design Mentor is an AI-powered architecture review platform. Users submit system design documents (as text or file uploads), and a multi-agent AI crew analyzes them for performance, security, and architectural quality. Results are streamed back to the client in real time. After a review completes, users can ask follow-up questions via a chat interface backed by a direct LLM call.
 
 ---
 
 ## Architecture
 
-The system follows a clean client-server architecture with a React SPA frontend and a FastAPI backend. Communication is one-directional streaming: the client submits a document and receives a live NDJSON stream of agent events until the review completes. Follow-up chat uses a separate streaming endpoint.
+The system is a FastAPI backend that exposes a streaming NDJSON API. A separate React frontend (see [chat-ui](https://github.com/atieqrehman11/chat-ui)) consumes the API.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Browser (React SPA)                  │
-│                                                             │
-│  ChatInterface                                              │
-│    └── useChatInterface (thin composing hook)               │
-│          ├── useReviewStream   (review submission + stream) │
-│          └── useChatStream     (follow-up chat stream)      │
-│                                                             │
-│  API Service Layer                                          │
-│    ├── client.ts      (fetch, timeout, X-Correlation-ID)    │
-│    ├── retry.ts       (exponential backoff)                 │
-│    ├── stream.ts      (NDJSON reader)                       │
-│    ├── chatStreamUtils.ts  (pure chat chunk processing)     │
-│    └── transformer.ts (event → Message)                     │
-└──────────────────────────┬──────────────────────────────────┘
-                           │  POST /api/v1/review  (JSON)
-                           │  POST /api/v1/review/upload  (multipart)
-                           │  POST /api/v1/chat/{correlation_id}
-                           │  ← NDJSON stream responses
-┌──────────────────────────▼──────────────────────────────────┐
-│                     FastAPI Backend                         │
-│                                                             │
-│  review.py endpoint                                         │
-│       │                                                     │
-│       ├── DocumentExtractor  (file → plain text)            │
-│       └── ReviewerFacade                                    │
-│               │                                             │
-│               ├── ReviewerService  (Thread)                 │
-│               │       └── DesignReviewerCrew (CrewAI)       │
-│               │               ├── librarian                 │
-│               │               ├── performance_architect     │
-│               │               ├── security_architect        │
-│               │               └── chief_strategist          │
-│               │                                             │
-│               ├── ReviewerEventListener  (CrewAI events)    │
-│               └── EventDispatcher  (session → Queue)        │
-│                                                             │
-│  chat.py endpoint                                           │
-│       └── ChatService  (litellm acompletion, streaming)     │
-│               └── LLMService  (Azure / OpenAI resolution)   │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                     FastAPI Backend                          │
+│                                                              │
+│  review.py endpoint                                          │
+│       │                                                      │
+│       ├── DocumentExtractor  (file → plain text)             │
+│       └── ReviewerFacade                                     │
+│               │                                              │
+│               ├── ReviewerService  (Thread)                  │
+│               │       └── DesignReviewerCrew (CrewAI)        │
+│               │               ├── librarian                  │
+│               │               ├── performance_architect      │
+│               │               ├── security_architect         │
+│               │               └── chief_strategist           │
+│               │                                              │
+│               ├── ReviewerEventListener  (CrewAI events)     │
+│               └── EventDispatcher  (session → Queue)         │
+│                                                              │
+│  chat.py endpoint                                            │
+│       └── ChatService  (litellm acompletion, streaming)      │
+│               └── LLMService  (Azure / OpenAI resolution)    │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Backend Design
 
-### API Layer (`backend/app/api/v1/`)
+### API Layer (`app/api/v1/`)
 
 | Endpoint | Method | Input | Description |
 |---|---|---|---|
@@ -71,7 +52,7 @@ Both review endpoints return a `StreamingResponse` with `application/x-ndjson` m
 
 ### Correlation ID Flow
 
-The client generates a UUID before submission and sends it as the `X-Correlation-ID` request header. The backend reads it via `_resolve_correlation_id()` and uses it as the session key throughout the pipeline — event dispatcher, SQLite storage, and follow-up chat lookup. This eliminates any client/server ID mismatch.
+The client generates a UUID before submission and sends it as the `X-Correlation-ID` request header. The backend reads it via `_resolve_correlation_id()` and uses it as the session key throughout the pipeline — event dispatcher, SQLite storage, and follow-up chat lookup.
 
 ### Document Extraction (`DocumentExtractor`)
 
@@ -84,25 +65,75 @@ Handles file validation and text extraction before the review pipeline runs.
 
 ### Streaming Pipeline (Review)
 
-The streaming architecture bridges a synchronous CrewAI execution thread with an async FastAPI response:
+The streaming architecture bridges a synchronous CrewAI execution thread with an async FastAPI response. The infrastructure is split into reusable generic components and reviewer-specific wiring:
 
 ```
 ReviewerFacade.start_review()
     │
     ├── Creates a thread-safe Queue
     ├── Registers session in EventDispatcher (correlation_id → Queue)
-    ├── Calls ReviewerService.run_crew_job() → spawns daemon Thread
-    └── Polls Queue via _async_generator_wrapper()
-            │
+    ├── ReviewerService.run_crew_job()
+    │       └── run_crew_in_thread()  [app/common/crew_runner.py]
+    │               ├── Spawns daemon Thread
+    │               ├── crew.kickoff(inputs)
+    │               ├── on_complete(result)  → persist + dispatch "complete"
+    │               ├── on_error(exc)        → dispatch error event
+    │               └── sync_queue.put(None)                 → poison pill
+    └── stream_queue(sync_queue)  [app/common/streaming.py]
             ├── run_in_executor() to avoid blocking the event loop
             ├── Serializes Pydantic models / dicts to JSON
             ├── Yields "payload\n\n" chunks
             └── Terminates on status "complete" | "error" | None (poison pill)
 ```
 
-The `EventDispatcher` is a singleton that maps `correlation_id` → `Queue`. The `ReviewerEventListener` subscribes to CrewAI's event bus and dispatches typed `ReviewResponse` objects into the correct queue. A singleton guard (`if hasattr(self, '_initialized')`) prevents handler stacking on repeated instantiation.
+`app/common/streaming.py` and `app/common/crew_runner.py` are feature-agnostic — any future crew-based feature reuses them directly.
 
-### Chat Service (`ChatService`)
+The `EventDispatcher` is a singleton that maps `correlation_id` → `Queue`. The `ReviewerEventListener` subscribes to CrewAI's event bus and dispatches typed `ReviewResponse` objects into the correct queue. A class-level `_listeners_setup` guard prevents handler stacking on repeated `setup_listeners` calls.
+
+### Dependency Injection & Startup Wiring
+
+All shared singletons are built once at startup in `main.py` and stored on `app.state`. FastAPI endpoints resolve them via `Depends()` — no module-level globals, no service locator.
+
+**Startup order** (matters — each step depends on the previous):
+
+```python
+# 1. Core infrastructure
+_event_dispatcher = EventDispatcher()          # process-wide singleton
+
+# 2. Services (depend on dispatcher)
+app.state.reviewer_service = ReviewerService(_event_dispatcher)
+
+# 3. Document extractor (no dependencies)
+_document_extractor = DocumentExtractor()
+
+# 4. Facade (depends on service, dispatcher, and extractor)
+app.state.reviewer_facade = ReviewerFacade(app.state.reviewer_service, _event_dispatcher, _document_extractor)
+
+# 5. CrewAI event listener (must wire AFTER dispatcher exists)
+ReviewerEventListener(event_dispatcher=_event_dispatcher)
+```
+
+**Endpoint resolution** (`review.py`):
+
+```python
+def _get_reviewer_facade(request: Request) -> ReviewerFacade:
+    return request.app.state.reviewer_facade
+
+ReviewerFacadeDep = Annotated[ReviewerFacade, Depends(_get_reviewer_facade)]
+```
+
+Endpoints declare the dependency type; FastAPI injects the singleton from `app.state` on each request. This keeps endpoints testable — tests can swap `app.state.reviewer_facade` for a mock without patching imports.
+
+**Singleton strategy**
+
+| Class | Mechanism | Reason |
+|---|---|---|
+| `EventDispatcher` | `__new__` + `_initialized` guard | Process-wide queue registry — must be one instance |
+| `ReviewerEventListener` | `__new__` + class-level `_listeners_setup` | Prevents CrewAI event handler stacking on re-instantiation |
+| `Settings` | `__new__` + `_initialized` guard | Config loaded once at import time |
+| `ReviewerService`, `ReviewerFacade` | Constructed once in `main.py`, stored on `app.state` | Shared across requests; not true singletons — could be scoped if needed |
+
+
 
 Handles follow-up questions after a review completes. Loads the stored design doc and final report from SQLite, then calls the LLM directly (no crew) via `litellm.acompletion`.
 
@@ -124,7 +155,7 @@ When `USE_AZURE_OPENAI=true`, both methods route to Azure; otherwise standard Op
 
 ### CrewAI Multi-Agent Crew (`DesignReviewerCrew`)
 
-The crew runs sequentially with four specialized agents. Configuration is loaded from `config/review/v1/agents.yaml` and `config/review/v1/tasks.yaml` (paths hardcoded in the crew class).
+The crew runs sequentially with four specialized agents. Configuration is loaded from `config/review/v1/agents.yaml` and `config/review/v1/tasks.yaml`.
 
 ```
 extract_blueprint_task  (librarian)
@@ -171,7 +202,8 @@ Key configuration groups:
 
 | Group | `settings.toml` section | Notable keys |
 |---|---|---|
-| App | `[app]` | `name`, `version`, `environment`, `debug` |
+| App | `[app]` | `name`, `version`, `environment` |
+| Logging | `[logging]` | `log_level` (also controls FastAPI debug mode) |
 | Server | `[server]` | `host`, `port`, `reload` |
 | CORS | `[cors]` | `origins`, `credentials`, `methods`, `headers` |
 | Reviewer | `[reviewer]` | `max_file_size_mb` |
@@ -181,155 +213,65 @@ Key configuration groups:
 
 ---
 
-## Frontend Design
+## Frontend
 
-### Component Tree
+The frontend is maintained in a separate repository: https://github.com/atieqrehman11/chat-ui
 
-```
-App
-└── ChatInterface
-      ├── useChatInterface        (thin composing hook — shared state)
-      │     ├── useReviewStream   (review submission + NDJSON processing)
-      │     └── useChatStream     (follow-up chat streaming)
-      ├── MessageList
-      │     └── MessageBubble     (per message; ReactMarkdown for all text content)
-      └── InputArea
-            ├── useInputArea
-            └── FileUploader
-                  └── useFileUploader
-```
-
-Each component follows the project convention: one `.tsx` file, one `.module.css`, one `use<Name>.ts` hook, and an `index.tsx` re-export.
-
-### Hook Responsibilities
-
-| Hook | Responsibility |
-|---|---|
-| `useChatInterface` | Owns all shared state (`messages`, `isStreaming`, `isFollowUpMode`, `error`); routes submit to the correct sub-hook |
-| `useReviewStream` | Submits the review, processes the NDJSON stream, applies thinking→result upsert |
-| `useChatStream` | Submits follow-up chat, drains the chunk stream, updates conversation history ref |
-| `chatStreamUtils.ts` | Pure NDJSON chunk processing — no React deps, fully unit-testable |
-
-### State Management (`useChatInterface`)
-
-All chat state lives in this hook. No global state manager is used.
-
-| State | Type | Description |
-|---|---|---|
-| `messages` | `Message[]` | Full conversation history |
-| `isStreaming` | `boolean` | True while any stream is in progress |
-| `isFollowUpMode` | `boolean` | True after a review completes; switches input to chat mode |
-| `error` | `string \| null` | User-facing error message |
-| `activeCorrelationIdRef` | `Ref<string \| null>` | Set to `correlationId` once review completes; used for chat routing |
-| `chatHistoryRef` | `Ref<ChatMessage[]>` | Conversation turns forwarded to the LLM |
-
-`handleSubmit` is the single entry point for user actions. It generates a `correlationId`, appends the user message, then routes to `startReview` or `startChat` based on `activeCorrelationIdRef`.
-
-### Correlation ID (Frontend)
-
-The client generates a UUID via `generateCorrelationId()` before each review submission and sends it as the `X-Correlation-ID` header. The same ID is used to tag all messages in the conversation, enabling `groupMessagesByCorrelation` in `MessageList` to keep them visually grouped. No patching or header-reading is needed after the response arrives.
-
-### API Service Layer (`frontend/src/services/api/`)
-
-| Module | Responsibility |
-|---|---|
-| `client.ts` | `fetch` wrappers; injects `X-Correlation-ID` header; timeout + abort signal management |
-| `retry.ts` | Exponential backoff retry (3 attempts, 1 s base, ×2 multiplier); skips retry on 4xx and AbortError |
-| `stream.ts` | NDJSON stream reader; buffers partial lines across chunks |
-| `chatStreamUtils.ts` | Pure chat chunk processing; `processSingleLine`, `processLines`, `drainChatStream` |
-| `transformer.ts` | Maps `ReviewResponse` events to typed `Message` objects by `message_type` / `status` |
-| `types.ts` | Shared interfaces: `RetryConfig`, `RequestOptions` (incl. `correlationId`), `ReviewStreamResult`, event constants |
-
-### Message Types
-
-| `MessageType` | Trigger | UI Representation |
-|---|---|---|
-| `USER` | User submits | Right-aligned user bubble |
-| `AGENT_THINKING` | `AgentExecutionStartedEvent` | Inline thinking indicator with agent name; rendered via ReactMarkdown |
-| `AGENT_RESULT` | `TaskCompletedEvent` | Replaces thinking bubble in-place; ReactMarkdown for text, `ReportContent` for structured reports |
-| `SYSTEM_COMPLETE` | `CrewKickoffCompletedEvent` | Completion notice |
-| `ERROR` | Stream/API error | Error bubble |
-
-All non-report text content (including follow-up chat replies) is rendered through `ReactMarkdown`, ensuring markdown formatting is preserved.
-
-### File Upload (`FileUploader` / `useFileUploader`)
-
-- Client-side validation: file type (extension check) and size (≤ 5 MB) before any network call
-- Drag-and-drop supported via native drag events
-- Accepted types: `.txt`, `.md`, `.json`, `.pdf`, `.doc`, `.docx`
-- Hidden in follow-up chat mode (`showFileUpload={!isFollowUpMode}`)
+It is a React 18 + TypeScript SPA that consumes the streaming NDJSON API. See the frontend repo for component architecture, hook design, and configuration options.
 
 ---
 
 ## Data Flow: End-to-End Review
 
 ```
-1.  User pastes text or uploads file → InputArea
-2.  useChatInterface.handleSubmit()
-3.  → generateCorrelationId() → UUID stored in activeCorrelationIdRef (pending)
-4.  → User message appended to messages[] with correlationId
-5.  → useReviewStream.startReview()
-6.  → submitReviewWithRetry() or submitReviewWithFile()
-        sends X-Correlation-ID header
-7.  → POST /api/v1/review or /api/v1/review/upload
-8.  Backend: _resolve_correlation_id() reads X-Correlation-ID header
-9.  Backend: DocumentExtractor.extract() (if file)
-10. Backend: ReviewerFacade.start_review()
-11.   → Queue created, session registered in EventDispatcher
-12.   → ReviewerService.run_crew_job() → daemon Thread
-13.   → DesignReviewerCrew.crew().kickoff()
-14.     → librarian: extract_blueprint_task → DocBlueprint
-15.     → performance_architect + security_architect (concurrent)
-16.     → chief_strategist: final_review_task → ReviewReport
-17. ReviewerEventListener dispatches events → Queue
-18. ReviewerFacade polls Queue → yields NDJSON chunks
-19. Frontend: parseNDJSONStream → transformEventToMessage
-20. useReviewStream: setMessages (upsert thinking → result)
-21. Stream ends (status: "complete") → activeCorrelationIdRef set, isFollowUpMode = true
+1.  Client sends POST /api/v1/review (or /upload) with X-Correlation-ID header
+2.  Backend: _resolve_correlation_id() reads header
+3.  Backend: DocumentExtractor.extract() (if file upload)
+4.  Backend: ReviewerFacade.start_review()
+5.    → Queue created, session registered in EventDispatcher
+6.    → ReviewerService.run_crew_job() → daemon Thread
+7.    → DesignReviewerCrew.crew().kickoff()
+8.      → librarian: extract_blueprint_task → DocBlueprint
+9.      → performance_architect + security_architect (concurrent)
+10.     → chief_strategist: final_review_task → ReviewReport
+11. ReviewerEventListener dispatches events → Queue
+12. ReviewerFacade polls Queue → yields NDJSON chunks to client
+13. Stream ends with status: "complete"
 ```
 
 ## Data Flow: Follow-up Chat
 
 ```
-1.  User types question → InputArea (chat mode)
-2.  useChatInterface.handleSubmit()
-3.  → activeCorrelationIdRef.current is set → routes to useChatStream.startChat()
-4.  → chatHistoryRef updated with user turn
-5.  → submitChat(correlationId, history)
-6.  → POST /api/v1/chat/{correlation_id}
-7.  Backend: ReviewStore loads design_doc + final_report from SQLite
-8.  Backend: ChatService.stream_reply() → litellm.acompletion (streaming)
-9.  Frontend: drainChatStream → onChunk updates assistant message bubble
-10. Stream ends → chatHistoryRef updated with assistant reply
+1.  Client sends POST /api/v1/chat/{correlation_id}
+2.  Backend: ReviewStore loads design_doc + final_report from SQLite
+3.  Backend: ChatService.stream_reply() → litellm.acompletion (streaming)
+4.  NDJSON chunks streamed back to client
 ```
 
 ---
 
 ## Key Design Decisions
 
+**Dependency injection via `app.state` + `Depends()`**
+Singletons are built once at startup and stored on `app.state`. Endpoints resolve them via FastAPI's `Depends()` — no module-level globals. This makes endpoints independently testable: swap `app.state.reviewer_facade` for a mock in tests without patching imports.
+
+**Generic streaming infrastructure**
+`app/common/streaming.py` provides `stream_queue()` — a feature-agnostic async generator that polls a thread-safe Queue and yields NDJSON chunks. `app/common/crew_runner.py` provides `run_crew_in_thread()` — handles thread spawning, error dispatch, and poison pill for any CrewAI crew. `ReviewerFacade` and `ReviewerService` are thin wrappers that inject reviewer-specific callbacks (persistence, completion message). Adding a second crew-based feature requires only a new crew class, a thin service, and an endpoint — zero duplication of streaming infrastructure.
+
 **Thread + Queue bridge for streaming**
 CrewAI's `crew.kickoff()` is synchronous and blocking. Running it in a daemon thread with a `Queue` as the event bus allows FastAPI's async event loop to remain unblocked while still streaming results incrementally.
 
 **Client-generated correlation ID via header**
-The client generates the `correlation_id` UUID and sends it as `X-Correlation-ID`. The backend reads it (with UUID fallback).
-
-**Hook decomposition: one concern per hook**
-`useChatInterface` is a thin composing hook. `useReviewStream` owns review streaming; `useChatStream` owns chat streaming; `chatStreamUtils.ts` contains pure stream utilities with no React dependencies. This keeps each unit testable in isolation and avoids nesting beyond 4 levels (SonarQube rule).
-
-**AGENT_THINKING → AGENT_RESULT upsert**
-Rather than appending a new message for each agent result, the frontend replaces the corresponding thinking bubble in-place. This keeps the message list clean and avoids visual clutter during multi-agent execution.
-
-**ReactMarkdown for all text content**
-Both agent thinking/result messages and follow-up chat replies are rendered through `ReactMarkdown`. This ensures bold, lists, headings, and code blocks display correctly regardless of which path produced the content.
+The client generates the `correlation_id` UUID and sends it as `X-Correlation-ID`. The backend reads it (with UUID fallback). This eliminates any client/server ID mismatch and allows the same ID to be used for follow-up chat routing.
 
 **Single agent config version**
-Agent YAML config is versioned under `config/review/v1/`.
+Agent YAML config is versioned under `config/review/v1/`. Bumping to `v2` requires only a new directory and a path change in the crew class.
 
 **Output format negotiation**
-The `output_format` field (`markdown` | `plain` | `json`) is passed through the entire pipeline. Each agent's task prompt includes a FORMAT DIRECTIVE controlling how narrative fields (`summary`, `deep_dive`) are rendered, while structured fields (scores, findings lists) are always plain data.
+The `output_format` field (`markdown` | `plain` | `json`) is passed through the entire pipeline. Each agent's task prompt includes a FORMAT DIRECTIVE controlling how narrative fields are rendered, while structured fields (scores, findings lists) are always plain data.
 
 **Dual LLM backend support**
-`LLMService` supports both standard OpenAI and Azure OpenAI, selected via `USE_AZURE_OPENAI`. `get_litellm_params()` is the single resolution point used by `ChatService`; `create_llm()` is used by the CrewAI agents. Both methods apply the same provider logic.
+`LLMService` supports both standard OpenAI and Azure OpenAI, selected via `USE_AZURE_OPENAI`. `get_litellm_params()` is the single resolution point used by `ChatService`; `create_llm()` is used by the CrewAI agents.
 
 ---
 
@@ -337,48 +279,34 @@ The `output_format` field (`markdown` | `plain` | `json`) is passed through the 
 
 | Layer | Error Type | Handling |
 |---|---|---|
-| File upload (backend) | `ExtractionError` | Mapped to `DocumentExtractionException` → HTTP 400/413/422 |
-| Missing input (backend) | No file + no text | `MissingInputException` → HTTP 400 |
-| Input validation (backend) | `ValidationFailedException` | Raised in `@before_kickoff`; caught in thread, sent as `status: "error"` event with `feedback` |
-| Crew execution (backend) | Any exception in thread | Caught, wrapped in `ReviewResponse(status="error")`, put on Queue |
+| File upload | `ExtractionError` | Mapped to `DocumentExtractionException` → HTTP 400/413/422 |
+| Missing input | No file + no text | `MissingInputException` → HTTP 400 |
+| Input validation | `ValidationFailedException` | Raised in `@before_kickoff`; caught in thread, sent as `status: "error"` event |
+| Crew execution | Any exception in thread | Caught, wrapped in `ReviewResponse(status="error")`, put on Queue |
 | Chat session not found | `ReviewNotFoundException` | Raised by `ReviewStore`; mapped to HTTP 404 by central exception handler |
-| Network (frontend) | `TypeError` (fetch) | Mapped to `ApiError` with user-friendly message |
-| HTTP 4xx/5xx (frontend) | `ApiError` | Displayed in error banner; 4xx not retried |
-| Stream parse error (frontend) | JSON parse failure | Logged, line skipped, stream continues |
-| Timeout (frontend) | `AbortError` | Mapped to `ApiError`, not retried |
-| Chat stream error (frontend) | `status: "error"` chunk | Displayed inline in the assistant message bubble only |
 
 ---
 
 ## Testing
 
-### Backend
 - Framework: `pytest` with async support (`pytest-asyncio`)
-- Config: `backend/pytest.ini`
-- Run: `pytest` from `backend/` with venv active
-
-### Frontend
-- Framework: Jest + React Testing Library
-- Tests co-located in `__tests__/` folders
-- Focus: transformer/utility logic (`chatStreamUtils`, `transformer`) and component behaviour
-- Run: `npm test -- --watchAll=false` from `frontend/`
+- Config: `pytest.ini`
+- Run: `pytest` from the project root with venv active
 
 ---
 
 ## Deployment
 
 ### Development
+
 ```bash
-./dev.sh full          # starts both services
-./dev.sh backend       # FastAPI on :8000
-./dev.sh frontend      # React dev server on :3000
-docker-compose -f docker-compose.dev.yml up
+./manage.sh           # starts API on :8000
 ```
 
 ### Production
-- Backend: `uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4`
-- Frontend: `npm run build` → serve `frontend/build/` as static files
-- Container: `backend/Dockerfile` + Terraform config in `backend/deploy/container/` (Azure Container Instances)
+
+- `uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4`
+- Container: `Dockerfile` + Terraform config in `deploy/container/` (Azure Container Instances)
 
 ### Environment Variables
 
@@ -391,4 +319,3 @@ docker-compose -f docker-compose.dev.yml up
 | `AZURE_API_KEY` | If Azure | Azure API key |
 | `AZURE_DEPLOYMENT_NAME` | If Azure | Azure deployment name |
 | `AZURE_API_VERSION` | If Azure | Azure API version |
-| `REACT_APP_API_BASE_URL` | No | Frontend API base URL (default `/api/v1`) |

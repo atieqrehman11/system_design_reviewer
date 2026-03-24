@@ -2,17 +2,13 @@ site_name: System Design Mentor
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Configuration: configuration.md
   - API Reference: api-reference.md
+  - Configuration: configuration.md
+  - Design: design.md
 theme:
   name: material
 plugins:
   - search
-  - mkdocstrings:
-      handlers:
-        python:
-          options:
-            show_root_full_path: false
 extra:
-  repo_name: SystemDesignMentor
-  repo_url: https://example.com/your/repo
+  repo_name: system-design-reviewer
+  repo_url: https://github.com/atieqrehman11/system-design-reviewer

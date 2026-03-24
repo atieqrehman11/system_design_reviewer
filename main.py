@@ -15,16 +15,18 @@ from app.services.reviewer.reviewer_event_listeners import ReviewerEventListener
 from app.services.reviewer.reviewer_facade import ReviewerFacade
 from app.services.reviewer.reviewer_service import ReviewerService
 from app.config.config_keys import (
-    APP_NAME, APP_DESCRIPTION, APP_VERSION, APP_DEBUG,
+    APP_NAME, APP_DESCRIPTION, APP_VERSION,
     CORS_ORIGINS, CORS_CREDENTIALS, CORS_METHODS, CORS_HEADERS,
-    SERVER_HOST, SERVER_PORT, SERVER_RELOAD, APP_ENVIRONMENT
+    SERVER_HOST, SERVER_PORT, SERVER_RELOAD,
 )
+
+_debug = settings.get("log_level", "INFO").upper() == "DEBUG"
 
 app = FastAPI(
     title=settings.get(APP_NAME),
     description=settings.get(APP_DESCRIPTION),
     version=settings.get(APP_VERSION),
-    debug=settings.get(APP_DEBUG),
+    debug=_debug,
 )
 
 # Configure CORS for frontend communication
@@ -48,8 +50,9 @@ init_db()
 _event_dispatcher = EventDispatcher()
 app.state.event_dispatcher = _event_dispatcher
 app.state.reviewer_service = ReviewerService(_event_dispatcher)
-app.state.reviewer_facade = ReviewerFacade(app.state.reviewer_service, _event_dispatcher)
-app.state.document_extractor = DocumentExtractor()
+_document_extractor = DocumentExtractor()
+app.state.document_extractor = _document_extractor
+app.state.reviewer_facade = ReviewerFacade(app.state.reviewer_service, _event_dispatcher, _document_extractor)
 
 # Wire the CrewAI event listener to the shared dispatcher — must happen once at startup
 ReviewerEventListener(event_dispatcher=_event_dispatcher)

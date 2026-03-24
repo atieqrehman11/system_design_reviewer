@@ -30,40 +30,38 @@ class Settings:
         # Configuration mapping: env_var -> (property_key, default_value, type)
         self._config_map = {
             # Application metadata
-            "app_name": ("APP_NAME", "app.name", "System Design Mentor sdf", str),
-            "app_description": ("APP_DESCRIPTION", "app.description", "AI-powered architecture analyst", str),
+            "app_name": ("APP_NAME", "app.name", "System Design Mentor API", str),
+            "app_description": ("APP_DESCRIPTION", "app.description", "AI-powered architecture analysis and recommendations", str),
             "app_version": ("APP_VERSION", "app.version", "0.0.0", str),
-            
+
             # Server configuration
             "host": ("SERVER_HOST", "server.host", "0.0.0.0", str),
             "port": ("SERVER_PORT", "server.port", 8000, int),
             "reload": ("SERVER_RELOAD", "server.reload", True, bool),
-            
+
             # CORS configuration
             "cors_origins": ("CORS_ORIGINS", "cors.origins", ["http://localhost:3000"], list),
             "cors_credentials": ("CORS_CREDENTIALS", "cors.credentials", True, bool),
             "cors_methods": ("CORS_METHODS", "cors.methods", ["*"], list),
             "cors_headers": ("CORS_HEADERS", "cors.headers", ["*"], list),
-            
+
             # Environment
-            "environment": ("APP_ENVIRONMENT", "app.environment", "development", str),
-            "debug": ("APP_DEBUG", "app.debug", True, bool),
-            
-            # API configuration
-            "api_v1_prefix": ("API_V1_PREFIX", "api.v1.prefix", "/api/v1", str),
-            
-            # CrewAI configuration
+            "environment": ("APP_ENVIRONMENT", "app.environment", "production", str),
+
+            # Logging
+            "log_level": ("LOGGING_LOG_LEVEL", "logging.log_level", "INFO", str),
+            "noisy_loggers": ("LOGGING_NOISY_LOGGERS", "logging.noisy_loggers", ["httpx", "httpcore", "openai", "anthropic", "litellm", "crewai"], list),
+
+            # OpenAI — third-party convention, no prefix change
             "openai_api_key": ("OPENAI_API_KEY", "openai.api_key", "", str),
             "openai_model_name": ("OPENAI_MODEL_NAME", "openai.model_name", "", str),
-            
-            #azure configuration
-            "use_azure_openai": ("USE_AZURE_OPENAI", "use_azure_openai", False, bool),
-            "azure_api_version": ("AZURE_API_VERSION", "azure_api_version", "", str),
-            "azure_endpoint": ("AZURE_ENDPOINT","azure_endpoint", "", str),
-            "azure_api_key": ("AZURE_API_KEY", "azure_api_key", "", str),
-            "azure_deployment_name": ("AZURE_DEPLOYMENT_NAME","azure_deployment_name", "", str),
 
-            "crewai_verbose": ("CREWAI_VERBOSE", "crewai.verbose", True, bool),
+            # Azure OpenAI — third-party convention, no prefix change
+            "use_azure_openai": ("USE_AZURE_OPENAI", "azure.use_azure_openai", False, bool),
+            "azure_api_version": ("AZURE_API_VERSION", "azure.api_version", "", str),
+            "azure_endpoint": ("AZURE_ENDPOINT", "azure.endpoint", "", str),
+            "azure_api_key": ("AZURE_API_KEY", "azure.api_key", "", str),
+            "azure_deployment_name": ("AZURE_DEPLOYMENT_NAME", "azure.deployment_name", "", str),
 
             # Azure LLM generation params
             "azure_llm_temperature": ("AZURE_LLM_TEMPERATURE", "azure_llm.temperature", 1.0, float),
@@ -79,8 +77,10 @@ class Settings:
             "reviewer_max_file_size_mb": ("REVIEWER_MAX_FILE_SIZE_MB", "reviewer.max_file_size_mb", 5, int),
 
             # Storage
-            "db_path": ("DB_PATH", "storage.db_path", "", str),
+            "db_path": ("STORAGE_DB_PATH", "storage.db_path", "", str),
 
+            # Tracing
+            "crewai_tracing_enabled": ("CREWAI_TRACING_ENABLED", "tracing.enabled", False, bool),
         }
         
         # Load all configuration values

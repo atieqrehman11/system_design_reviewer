@@ -1,6 +1,8 @@
 from typing import ClassVar
 
 from app.common.logger import logger
+from app.common.request_context import get_correlation_id, set_correlation_id
+from app.common.util import log_task_done
 from app.models.api_schema import ReviewResponse
 from crewai.events import AgentExecutionStartedEvent, BaseEventListener, TaskCompletedEvent
 
@@ -12,6 +14,12 @@ class ReviewerEventListener(BaseEventListener):
     TraceCollectionListener) to prevent handler stacking when setup_listeners
     is called more than once — each call creates new closure objects that the
     event bus treats as distinct handlers, causing N-times duplication.
+
+    Correlation ID resolution order:
+    1. ContextVar (set by crew_runner for the kickoff thread)
+    2. Agent fingerprint metadata (set by before_kickoff hook, covers events
+       fired from CrewAI's internal ThreadPoolExecutor where the ContextVar
+       is not inherited)
     """
 
     _instance: ClassVar["ReviewerEventListener | None"] = None
@@ -28,6 +36,19 @@ class ReviewerEventListener(BaseEventListener):
         self.dispatcher = event_dispatcher
         self._initialized = True
         super().__init__()
+
+    def _get_correlation_id(self, context: str, metadata: dict | None = None) -> str | None:
+        """Return the current correlation ID from ContextVar, falling back to
+        agent fingerprint metadata for events fired from CrewAI's internal thread pool."""
+        correlation_id = get_correlation_id()
+        if not correlation_id or correlation_id == "-":
+            correlation_id = (metadata or {}).get("correlation_id")
+        
+        if not correlation_id or correlation_id == "-":
+            logger.warning("[ReviewerEventListener] No correlation_id in context; skipping dispatch for: %s", context)
+            return None
+        
+        return correlation_id
 
     def setup_listeners(self, crewai_event_bus):
         """Register CrewAI event handlers.
@@ -47,15 +68,13 @@ class ReviewerEventListener(BaseEventListener):
 
         @crewai_event_bus.on(AgentExecutionStartedEvent)
         def on_agent_execution_started(source, event):
-            logger.info("[ReviewerEventListener] Received AgentExecutionStartedEvent")
-            metadata = source.fingerprint.metadata
-            correlation_id = metadata.get("correlation_id")
-            if not correlation_id:
-                logger.warning(
-                    "[ReviewerEventListener] No correlation_id in metadata; skipping dispatch for event: %s",
-                    event,
-                )
-                return
+            metadata = event.agent.fingerprint.metadata
+            logger.debug("[ReviewerEventListener] Received AgentExecutionStartedEvent: agent metadata: %s", metadata)
+            
+            correlation_id = self._get_correlation_id("AgentExecutionStartedEvent", metadata)
+            if correlation_id:
+                set_correlation_id(correlation_id)
+
             message = ReviewResponse(
                 agent=metadata.get("display_name", "Reviewer"),
                 message_type="thinking",
@@ -66,31 +85,22 @@ class ReviewerEventListener(BaseEventListener):
 
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source, event):
-            logger.info("[ReviewerEventListener] Received TaskCompletedEvent")
+            assigned_agent = event.task.agent if event.task and event.task.agent else None
+            agent_name = "Reviewer"
+            agent_metadata = {}
+            if assigned_agent:
+                agent_metadata = assigned_agent.fingerprint.metadata
+                agent_name = agent_metadata.get("display_name", assigned_agent.role)
+
+            correlation_id = self._get_correlation_id("TaskCompletedEvent agent=%s" % agent_name, agent_metadata)
+
+            log_task_done(event.output, agent_name)
 
             if not event.output or not event.output.pydantic:
-                logger.warning(
-                    "[ReviewerEventListener] TaskCompletedEvent has no pydantic output; skipping dispatch.",
-                )
+                logger.warning("[ReviewerEventListener] TaskCompletedEvent has no pydantic output; skipping dispatch.")
                 return
 
             event_output = event.output.pydantic.model_dump(exclude_none=True)
-            assigned_agent = source.agent if source.agent else None
-            correlation_id = None
-            agent_name = "Reviewer"
-
-            if assigned_agent:
-                agent_name = assigned_agent.fingerprint.metadata.get("display_name", assigned_agent.role)
-                correlation_id = assigned_agent.fingerprint.metadata.get("correlation_id")
-
-            if not correlation_id:
-                logger.warning(
-                    "[ReviewerEventListener] No correlation_id in metadata; skipping dispatch for event: %s, agent: %s",
-                    event,
-                    agent_name,
-                )
-                return
-
             message = ReviewResponse(
                 agent=agent_name,
                 message_type="result",

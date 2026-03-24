@@ -7,7 +7,8 @@ from crewai.project import CrewBase, agent, before_kickoff, crew, task
 from app.common.constants import DESIGN_KEYWORDS
 from app.common.exception_handlers import ValidationFailedException
 from app.common.logger import logger
-from app.common.util import audit_logging_callback, log_task_metrics
+from app.config.config import settings
+from app.config.config_keys import LOG_LEVEL, CREWAI_TRACING_ENABLED
 from app.models.blueprint_schema import DocBlueprint
 from app.models.final_report_schema import ReviewReport
 from app.models.performance_schema import PerformanceReview
@@ -18,6 +19,8 @@ from app.services.llm import LLMService
 @CrewBase
 class DesignReviewerCrew():
     llm_service = LLMService()
+    _verbose = settings.get(LOG_LEVEL, "INFO").upper() == "DEBUG"
+    _tracing = settings.get_bool(CREWAI_TRACING_ENABLED, False)
 
     agents_config = '../../config/review/v1/agents.yaml'
     tasks_config  = '../../config/review/v1/tasks.yaml'
@@ -49,8 +52,6 @@ class DesignReviewerCrew():
         return self.llm_service.create_llm(llm_params)
 
     def _validate_extraction(self, output: TaskOutput) -> None:
-        # Log validation issues but do NOT raise — let downstream agents decide how to handle them.
-        # The performance, security, and final tasks already handle is_valid=False gracefully.
         if output.pydantic and hasattr(output.pydantic, 'is_valid'):
             if not output.pydantic.is_valid:
                 errors = getattr(output.pydantic, 'validation_errors', [])
@@ -64,7 +65,7 @@ class DesignReviewerCrew():
             role=config.get('role'),
             goal=config.get('goal'),
             llm=self._create_llm(agent_name),
-            verbose=False,
+            verbose=self._verbose,
             config=config,
         )
 
@@ -106,7 +107,6 @@ class DesignReviewerCrew():
             config=self.tasks_config['performance_review_task'],
             context=[self.extract_blueprint_task()],
             output_pydantic=PerformanceReview,
-            callback=log_task_metrics,
         )
 
     @task
@@ -115,7 +115,6 @@ class DesignReviewerCrew():
             config=self.tasks_config['security_review_task'],
             context=[self.extract_blueprint_task()],
             output_pydantic=SecurityReview,
-            callback=log_task_metrics,
         )
 
     @task
@@ -128,7 +127,6 @@ class DesignReviewerCrew():
                 self.security_review_task(),
             ],
             output_pydantic=ReviewReport,
-            callback=audit_logging_callback,
         )
 
     # --- CREW ---
@@ -155,6 +153,17 @@ class DesignReviewerCrew():
             raise ValidationFailedException(
                 feedback="The document exceeds the maximum allowed length of 50,000 characters."
             )
+
+        # Stamp correlation_id onto each agent's fingerprint so event handlers
+        # can read it even when fired from CrewAI's internal thread pool
+        # (where the ContextVar may not be set).
+        correlation_id = inputs.get('correlation_id')
+        logger.debug("[DesignReviewerCrew] before_kickoff: correlation_id=%s, agents=%s", correlation_id, [a.role for a in self.agents])
+        if correlation_id:
+            for agent in self.agents:
+                agent.fingerprint.metadata['correlation_id'] = correlation_id
+                logger.debug("[DesignReviewerCrew] stamped correlation_id on agent: %s", agent.role)
+
         return inputs
 
     @crew
@@ -163,8 +172,9 @@ class DesignReviewerCrew():
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            verbose=False,
+            verbose=self._verbose,
             cache=False,
+            tracing=self._tracing,
         )
 
 

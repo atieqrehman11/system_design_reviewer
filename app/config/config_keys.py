@@ -8,7 +8,6 @@ APP_NAME = "app_name"
 APP_DESCRIPTION = "app_description"
 APP_VERSION = "app_version"
 APP_ENVIRONMENT = "environment"
-APP_DEBUG = "debug"
 
 # Server configuration
 SERVER_HOST = "host"
@@ -21,14 +20,10 @@ CORS_CREDENTIALS = "cors_credentials"
 CORS_METHODS = "cors_methods"
 CORS_HEADERS = "cors_headers"
 
-# API configuration
-API_V1_PREFIX = "api_v1_prefix"
-
 # CrewAI configuration
 OPENAI_API_KEY = "openai_api_key"
 OPENAI_MODEL_NAME = "openai_model_name"
 
-CREWAI_VERBOSE = "crewai_verbose"
 CREWAI_MANAGER_LLM = "crewai_manager_llm"
 
 USE_AZURE_OPENAI="use_azure_openai"
@@ -49,3 +44,10 @@ CHAT_MAX_TOKENS = "chat_max_tokens"
 
 # Storage
 DB_PATH = "db_path"
+
+# Logging
+LOG_LEVEL = "log_level"
+NOISY_LOGGERS = "noisy_loggers"
+
+# Tracing
+CREWAI_TRACING_ENABLED = "crewai_tracing_enabled"
