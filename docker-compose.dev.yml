@@ -1,32 +1,21 @@
 version: '3.8'
 
 services:
-  backend:
+  api:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - .:/app
       - /app/venv
     environment:
       - PYTHONPATH=/app
       - ENVIRONMENT=development
+    env_file:
+      - .env
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - REACT_APP_API_URL=http://localhost:8000
-    command: npm start
 
 networks:
   default:

@@ -1,0 +1,39 @@
+[app]
+name = "System Design Mentor API"
+description = "AI-powered architecture analysis and recommendations"
+version = "1.0.0"
+environment = "development"
+
+[logging]
+log_level = "DEBUG"
+noisy_loggers = ["httpx", "httpcore", "openai", "anthropic", "litellm", "crewai"]
+
+[server]
+host = "0.0.0.0"
+port = 8000
+reload = true
+
+[cors]
+origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"]
+credentials = true
+methods = ["*"]
+headers = ["*"]
+
+[reviewer]
+max_file_size_mb = 5
+
+[chat]
+model = "openai/gpt-4o"
+temperature = 0.3
+max_tokens = 1024
+
+[azure_llm]
+temperature = 1.0
+top_p = 1.0
+max_completion_tokens = 4096
+
+[storage]
+# Leave empty to use the default SQLite path
+db_path = ""
+
+# Secrets (OPENAI_API_KEY, AZURE_*, CREWAI_TRACING_ENABLED) are set via .env only

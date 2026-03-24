@@ -9,20 +9,22 @@ This guide covers all configuration options for System Design Mentor.
 The backend uses a layered configuration system. Priority order (highest to lowest):
 
 1. Environment variables
-2. `backend/app/settings.toml`
+2. `app/settings.toml`
 3. Hardcoded defaults in `Settings`
 
 ### settings.toml
 
-Located at `backend/app/settings.toml`. This is the primary configuration file.
+Located at `app/settings.toml`. This is the primary configuration file.
 
 ```toml
 [app]
 name = "System Design Mentor API"
 description = "AI-powered architecture analysis and recommendations"
 version = "1.0.0"
-environment = "dev"
-debug = true
+environment = "development"
+
+[logging]
+log_level = "DEBUG"
 
 [server]
 host = "0.0.0.0"
@@ -34,12 +36,6 @@ origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
 credentials = true
 methods = ["*"]
 headers = ["*"]
-
-[api.v1]
-prefix = "/api/v1"
-
-[crewai]
-verbose = true
 
 [reviewer]
 max_file_size_mb = 5
@@ -71,8 +67,8 @@ AZURE_DEPLOYMENT_NAME=your-deployment-name
 AZURE_API_VERSION=2024-02-01
 
 # App overrides (optional — override settings.toml values)
-ENVIRONMENT=development
-DEBUG=true
+ENVIRONMENT=production
+LOG_LEVEL=INFO
 SERVER_HOST=0.0.0.0
 SERVER_PORT=8000
 ```
@@ -108,7 +104,7 @@ Set `USE_AZURE_OPENAI=true` and provide all `AZURE_*` variables. When enabled:
 Agent roles, goals, prompts, and LLM parameters are defined in YAML files:
 
 ```
-backend/app/config/review/v1/
+app/config/review/v1/
   agents.yaml   # agent definitions (role, goal, backstory, llm_params)
   tasks.yaml    # task definitions (description, expected_output, async_execution)
 ```
@@ -133,27 +129,9 @@ These are ignored when `USE_AZURE_OPENAI=true` — all agents use the Azure depl
 
 ## Frontend Configuration
 
-### Environment Variables
+The frontend is maintained in a separate repository: https://github.com/atieqrehman11/chat-ui
 
-Create `.env` in the `frontend/` directory:
-
-```bash
-REACT_APP_API_BASE_URL=http://localhost:8000/api/v1
-```
-
-If not set, the frontend defaults to `/api/v1` (relative URL, works with the CRA proxy).
-
-### package.json proxy
-
-During development, the CRA dev server proxies API requests to the backend:
-
-```json
-{
-  "proxy": "http://localhost:8000"
-}
-```
-
-This means you can omit `REACT_APP_API_BASE_URL` in development and requests to `/api/v1/*` are forwarded automatically.
+See the frontend repo docs for all configuration options including environment variables and the dev proxy.
 
 ---
 
@@ -211,11 +189,11 @@ Pass environment variables via the compose file or a `.env` file in the project 
 ### Production
 
 ```bash
-# Build backend image
-cd backend && ./build-image.sh
+# Build image
+./build-image.sh <image-name> <version>
 
 # Deploy via Terraform (Azure Container Instances)
-cd backend/deploy/container
+cd deploy/container
 terraform apply
 ```
 
@@ -231,8 +209,8 @@ terraform apply
 | `AZURE_API_KEY` | env | — | Azure API key |
 | `AZURE_DEPLOYMENT_NAME` | env | — | Azure deployment name |
 | `AZURE_API_VERSION` | env | — | Azure API version |
-| `app.environment` | toml | `dev` | Runtime environment |
-| `app.debug` | toml | `true` | Debug mode |
+| `app.environment` | toml | `development` | Runtime environment |
+| `logging.log_level` | toml | `DEBUG` | Log level; also controls FastAPI debug mode (`DEBUG` = on) |
 | `server.host` | toml | `0.0.0.0` | Bind host |
 | `server.port` | toml | `8000` | Bind port |
 | `server.reload` | toml | `true` | Auto-reload on code change |
@@ -245,4 +223,4 @@ terraform apply
 | `azure_llm.top_p` | toml | `1.0` | Azure agent top_p |
 | `azure_llm.max_completion_tokens` | toml | `4096` | Azure agent max tokens |
 
-For a full list of config key constants, see `backend/app/config/config_keys.py`.
+For a full list of config key constants, see `app/config/config_keys.py`.

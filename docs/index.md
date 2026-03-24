@@ -25,7 +25,7 @@ An AI-powered architecture review platform. Submit a system design document and 
 ## Technology Stack
 
 - **Backend**: FastAPI, CrewAI, LiteLLM, Python 3.10+
-- **Frontend**: React 18, TypeScript, CSS Modules
+- **Frontend**: React 18, TypeScript — [chat-ui repo](https://github.com/atieqrehman11/chat-ui)
 - **AI**: OpenAI GPT-4o / Azure OpenAI (configurable)
 - **Infrastructure**: Docker, Docker Compose, Terraform (Azure Container Instances)
 
@@ -33,7 +33,7 @@ An AI-powered architecture review platform. Submit a system design document and 
 
 ## Quick Links
 
-- [Getting Started](getting-started.md) — set up and run locally
+- [Getting Started](getting-started.md) — set up and run the backend locally
 - [API Reference](api-reference.md) — endpoints, stream events, code examples
-- [Configuration Guide](configuration.md) — all config options including Azure OpenAI
+- [Configuration Guide](configuration.md) — all backend config options including Azure OpenAI
 - [Design Document](design.md) — architecture, data flow, and key design decisions
